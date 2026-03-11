@@ -1,14 +1,7 @@
-const KEY = 'tiny-park-save-v1';
+const KEY = 'tiny-park-save-v2';
 
 export const saveGame = (game) => {
-  const payload = {
-    map: game.map.serialize(),
-    economy: game.economy.serialize(),
-    guests: game.guestManager.serialize(),
-    objectives: game.objectives.serialize(),
-    selectedBuild: game.selectedBuild,
-  };
-  localStorage.setItem(KEY, JSON.stringify(payload));
+  localStorage.setItem(KEY, JSON.stringify(game.serialize()));
 };
 
 export const loadGame = () => {
