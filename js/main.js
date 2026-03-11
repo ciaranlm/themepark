@@ -27,6 +27,11 @@ class Game {
     this.selectedStructure = null;
     this.hoverTile = null;
     this.parkRating = 65;
+    this.parkName = 'Sunset Gardens';
+    this.entryFee = 10;
+    this.lifetimeGuests = 0;
+    this.lifetimeRevenue = 0;
+    this.currentDay = 1;
     this.floatingTexts = [];
     this.last = performance.now();
 
@@ -68,6 +73,7 @@ class Game {
       if (!check.valid) { this.ui.setHint(check.reason); return; }
       const item = BUILDING_DEFINITIONS[this.selectedBuild];
       if (item.kind === 'path') this.map.placePath(t.x, t.y);
+      else if (item.kind === 'terrain') this.map.placeWater(t.x, t.y);
       else this.map.placeStructure(t.x, t.y, item);
       this.economy.spend(item.cost);
       this.addFloatingText(`-$${item.cost}`, t.x, t.y, '#ffd1d1');
@@ -80,7 +86,8 @@ class Game {
       this.selectedTile = t;
       if (!t) return;
       const check = PlacementSystem.validatePlacement(this.map, t.x, t.y, this.selectedBuild, this.economy, this.objectives);
-      this.ui.setHint(`Tile (${t.x},${t.y}) • ${check.valid ? 'Valid build' : check.reason} • ${this.timeControls.label()}`);
+      const tile = this.map.getTile(t.x, t.y);
+      this.ui.setHint(`Tile (${t.x},${t.y}) • ${tile.base} • ${check.valid ? 'Valid placement' : check.reason} • ${this.timeControls.label()}`);
     });
   }
 
@@ -92,9 +99,7 @@ class Game {
     return this.map.inBounds(t.x, t.y) ? t : null;
   }
 
-  addFloatingText(text, x, y, color) {
-    this.floatingTexts.push({ text, x, y, life: 1.2, color });
-  }
+  addFloatingText(text, x, y, color) { this.floatingTexts.push({ text, x, y, life: 1.2, color }); }
 
   update(realDt) {
     const dt = this.timeControls.tick(realDt);
@@ -104,7 +109,11 @@ class Game {
       this.guestManager.update(dt, this);
       const upkeep = this.economy.tick(dt, totalUpkeep);
       if (upkeep > 0) this.addFloatingText(`-$${Math.round(upkeep)} upkeep`, this.map.entrance.x + 2, this.map.entrance.y - 2, '#ffe0cf');
-      if (this.objectives.update(this)) this.ui.renderBuildPanel();
+      if (this.objectives.update(this)) {
+        for (const id of this.objectives.justUnlocked) this.ui.notify(`New ride unlocked: ${BUILDING_DEFINITIONS[id].name}`);
+        this.ui.renderBuildPanel();
+        this.objectives.consumeNewFlags();
+      }
       this.floatingTexts = this.floatingTexts.map((t) => ({ ...t, life: t.life - dt })).filter((t) => t.life > 0);
     }
 
@@ -127,6 +136,7 @@ class Game {
     return {
       map: this.map.serialize(), economy: this.economy.serialize(), guests: this.guestManager.serialize(),
       objectives: this.objectives.serialize(), selectedBuild: this.selectedBuild, time: { ...this.timeControls },
+      parkName: this.parkName, entryFee: this.entryFee, lifetimeGuests: this.lifetimeGuests, lifetimeRevenue: this.lifetimeRevenue,
     };
   }
 
@@ -137,6 +147,10 @@ class Game {
     this.objectives.restore(data.objectives);
     this.selectedBuild = data.selectedBuild || 'path';
     if (data.time) Object.assign(this.timeControls, data.time);
+    this.parkName = data.parkName || this.parkName;
+    this.entryFee = data.entryFee ?? this.entryFee;
+    this.lifetimeGuests = data.lifetimeGuests ?? this.economy.totalGuestsServed;
+    this.lifetimeRevenue = data.lifetimeRevenue ?? this.economy.lifetimeRevenue;
     this.ui.renderBuildPanel();
   }
 }

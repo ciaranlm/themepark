@@ -60,6 +60,12 @@ export const drawStructure = (ctx, type, x, y, anim) => {
     for (let i = -26; i <= 26; i += 6) { ctx.strokeStyle = '#c69a64'; ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, -10 - Math.abs((i % 12) - 6)); ctx.stroke(); }
     ctx.fillStyle = '#487099'; ctx.fillRect(-12, -6, 12, 7);
     ctx.fillStyle = '#d74e4e'; ctx.fillRect(-2 + Math.sin(anim * 2) * 14, -14 - Math.cos(anim * 2) * 4, 4, 3);
+  } else if (type === 'megaCoaster') {
+    shadow(ctx, 0, 3, 34, 10, 0.3);
+    ctx.strokeStyle = '#3e4e7a'; ctx.lineWidth = 2.8;
+    ctx.beginPath(); ctx.moveTo(-30, -2); ctx.lineTo(-20, -24); ctx.lineTo(-8, -8); ctx.lineTo(6, -30); ctx.lineTo(20, -14); ctx.lineTo(30, -26); ctx.stroke();
+    for (let i = -30; i <= 30; i += 6) { ctx.strokeStyle = '#8fa1c5'; ctx.beginPath(); ctx.moveTo(i, 1); ctx.lineTo(i, -12 - Math.abs((i % 14) - 7)); ctx.stroke(); }
+    ctx.fillStyle = '#d44b4b'; ctx.fillRect(-10 + Math.sin(anim * 1.6) * 20, -16 - Math.cos(anim * 1.6) * 5, 5, 3);
   } else if (type === 'logFlume') {
     shadow(ctx, 0, 2, 24, 8);
     ctx.strokeStyle = '#5d7ca0'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-18, -6); ctx.lineTo(-2, -16); ctx.lineTo(10, -8); ctx.lineTo(18, -16); ctx.stroke();
@@ -89,6 +95,11 @@ export const drawStructure = (ctx, type, x, y, anim) => {
     shadow(ctx, 0, 1, 8, 2);
     ctx.fillStyle = '#5f9646'; ctx.fillRect(-5, -4, 10, 3);
     ['#e96a8d', '#f0d45f', '#8fd5ff'].forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(-4 + i * 4, -7 + (i % 2), 2, 2); });
+  } else if (type === 'statue') {
+    shadow(ctx, 0, 1, 7, 3);
+    ctx.fillStyle = '#8e9aad'; ctx.fillRect(-2, -14, 4, 10);
+    ctx.fillStyle = '#c3ccd9'; ctx.beginPath(); ctx.arc(0, -16, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#6a7487'; ctx.fillRect(-5, -5, 10, 3);
   } else if (type === 'kiosk') {
     shadow(ctx, 0, 1, 8, 3); booth(ctx, '#d1b89d', '#d46e52');
   } else if (type === 'stallBurger') {
