@@ -21,16 +21,23 @@ export class IsoRenderer {
   }
 
   gridToScreen(x, y) { return { x: this.originX + (x - y) * (this.tileW / 2), y: this.originY + (x + y) * (this.tileH / 2) }; }
-
   screenToGrid(sx, sy) {
     const x = ((sx - this.originX) / (this.tileW / 2) + (sy - this.originY) / (this.tileH / 2)) / 2;
     const y = ((sy - this.originY) / (this.tileH / 2) - (sx - this.originX) / (this.tileW / 2)) / 2;
     return { x: Math.floor(x), y: Math.floor(y) };
   }
 
-  drawBaseTile(ctx, x, y, tile) {
+  drawBaseTile(ctx, x, y, tile, time) {
     const grass = ['#6cae47', '#73b14d', '#669f42', '#77b64d', '#6aa848'];
     const path = ['#bea983', '#c7b38f', '#af9a74', '#c2ad8a'];
+    const water = ['#3f88bc', '#4d98cc', '#3b7cad'];
+    if (tile.base === 'water') {
+      const shimmer = Math.sin(time * 2.2 + tile.x * 0.3 + tile.y * 0.2) * 8;
+      drawDiamond(ctx, x, y, this.tileW, this.tileH, water[tile.waterVariant], 'rgba(20,62,102,0.35)');
+      drawDiamond(ctx, x, y + 2, this.tileW - 5, this.tileH - 6, `rgba(120,200,255,${0.16 + shimmer / 80})`, null);
+      return;
+    }
+
     const color = tile.base === 'path' || tile.base === 'entrance' ? path[tile.pathVariant] : grass[tile.grassVariant];
     drawDiamond(ctx, x, y, this.tileW, this.tileH, color, 'rgba(0,0,0,0.13)');
     if (tile.base !== 'path' && tile.base !== 'entrance' && tile.grassVariant % 2 === 0) {
@@ -49,14 +56,12 @@ export class IsoRenderer {
       for (let x = 0; x < GRID_SIZE; x++) {
         const tile = this.map.grid[y][x];
         const p = this.gridToScreen(x, y);
-        this.drawBaseTile(ctx, p.x, p.y, tile);
+        this.drawBaseTile(ctx, p.x, p.y, tile, time);
         if (tile.base === 'entrance') drawDiamond(ctx, p.x, p.y + 1, this.tileW - 6, this.tileH - 4, '#496b95');
       }
     }
 
-    for (const s of Object.values(this.map.structures)) {
-      drawQueue.push({ depth: s.x + s.y + s.width + s.height + 0.2, structure: s });
-    }
+    for (const s of Object.values(this.map.structures)) drawQueue.push({ depth: s.x + s.y + s.width + s.height + 0.2, structure: s });
     for (const g of game.guestManager.guests) drawQueue.push({ depth: g.drawX + g.drawY + 0.18, guest: g });
 
     drawQueue.sort((a, b) => a.depth - b.depth);
@@ -68,7 +73,7 @@ export class IsoRenderer {
         const s = item.structure;
         const anchor = this.gridToScreen(s.x + s.width / 2 - 0.5, s.y + s.height / 2 - 0.5);
         const def = BUILDING_DEFINITIONS[s.id];
-        drawStructure(ctx, def.renderType, anchor.x, anchor.y + this.tileH / 2, time * 0.8);
+        drawStructure(ctx, def.visualType, anchor.x, anchor.y + this.tileH / 2, time * 0.8);
       }
     }
 
@@ -79,22 +84,12 @@ export class IsoRenderer {
         const p = this.gridToScreen(t.x, t.y);
         drawDiamond(ctx, p.x, p.y, this.tileW, this.tileH, check.valid ? 'rgba(90,200,235,0.35)' : 'rgba(220,75,80,0.35)', check.valid ? '#7dd6f1' : '#da5757');
       }
-      if (check.valid && game.selectedBuild !== 'path') {
+      if (check.valid && BUILDING_DEFINITIONS[game.selectedBuild].kind !== 'path' && BUILDING_DEFINITIONS[game.selectedBuild].kind !== 'terrain') {
         const def = BUILDING_DEFINITIONS[game.selectedBuild];
         const center = this.gridToScreen(game.hoverTile.x + def.width / 2 - 0.5, game.hoverTile.y + def.height / 2 - 0.5);
         ctx.globalAlpha = 0.45;
-        drawStructure(ctx, def.renderType, center.x, center.y + this.tileH / 2, time * 0.7);
+        drawStructure(ctx, def.visualType, center.x, center.y + this.tileH / 2, time * 0.7);
         ctx.globalAlpha = 1;
-      }
-    }
-
-    if (game.selectedStructure) {
-      const s = game.selectedStructure;
-      for (let yy = 0; yy < s.height; yy++) {
-        for (let xx = 0; xx < s.width; xx++) {
-          const p = this.gridToScreen(s.x + xx, s.y + yy);
-          drawDiamond(ctx, p.x, p.y, this.tileW, this.tileH, 'rgba(255,255,180,0.23)', '#f0e48f');
-        }
       }
     }
 
@@ -102,7 +97,7 @@ export class IsoRenderer {
       const p = this.gridToScreen(t.x, t.y);
       ctx.globalAlpha = Math.max(0.25, t.life);
       ctx.fillStyle = t.color;
-      ctx.font = '11px Verdana';
+      ctx.font = 'bold 11px Verdana';
       ctx.fillText(t.text, p.x + 10, p.y - 10 - (1 - t.life) * 25);
       ctx.globalAlpha = 1;
     }

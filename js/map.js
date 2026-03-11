@@ -3,7 +3,15 @@ import { GRID_SIZE } from './rideDefinitions.js';
 export class GameMap {
   constructor() {
     this.grid = Array.from({ length: GRID_SIZE }, (_, y) =>
-      Array.from({ length: GRID_SIZE }, (_, x) => ({ x, y, base: 'grass', structureId: null, pathVariant: (x * 11 + y * 7) % 4, grassVariant: (x * 13 + y * 17) % 5 }))
+      Array.from({ length: GRID_SIZE }, (_, x) => ({
+        x,
+        y,
+        base: 'grass',
+        structureId: null,
+        pathVariant: (x * 11 + y * 7) % 4,
+        grassVariant: (x * 13 + y * 17) % 5,
+        waterVariant: (x * 3 + y * 5) % 3,
+      }))
     );
     this.entrance = { x: 1, y: Math.floor(GRID_SIZE / 2) };
     this.structures = {};
@@ -24,53 +32,38 @@ export class GameMap {
     });
   }
 
-  footprintHasAdjacentPath(tiles) {
-    return tiles.some(({ x, y }) => this.hasAdjacentPath(x, y));
-  }
+  footprintHasAdjacentPath(tiles) { return tiles.some(({ x, y }) => this.hasAdjacentPath(x, y)); }
 
-  placePath(x, y) {
-    this.getTile(x, y).base = 'path';
-  }
+  placePath(x, y) { this.getTile(x, y).base = 'path'; }
+  placeWater(x, y) { this.getTile(x, y).base = 'water'; }
 
   placeStructure(x, y, definition) {
     const structure = {
-      uid: this.nextStructureId++,
-      id: definition.id,
-      name: definition.name,
-      x,
-      y,
-      width: definition.width,
-      height: definition.height,
-      ticketPrice: definition.ticket,
-      upkeep: definition.upkeep,
-      excitement: definition.excitement,
-      capacity: definition.capacity,
-      usageCount: 0,
-      operating: true,
+      uid: this.nextStructureId++, id: definition.id, name: definition.name, x, y,
+      width: definition.width, height: definition.height, ticketPrice: definition.ticket,
+      upkeep: definition.upkeep, excitement: definition.excitement, capacity: definition.capacity,
+      usageCount: 0, operating: true, guestsServed: 0,
     };
     this.structures[structure.uid] = structure;
 
     for (let yy = 0; yy < definition.height; yy++) {
-      for (let xx = 0; xx < definition.width; xx++) {
-        this.getTile(x + xx, y + yy).structureId = structure.uid;
-      }
+      for (let xx = 0; xx < definition.width; xx++) this.getTile(x + xx, y + yy).structureId = structure.uid;
     }
     return structure;
   }
 
   structureAt(x, y) {
     const tile = this.getTile(x, y);
-    if (!tile || !tile.structureId) return null;
-    return this.structures[tile.structureId] || null;
+    return (!tile || !tile.structureId) ? null : (this.structures[tile.structureId] || null);
   }
 
   removeAt(x, y) {
     const tile = this.getTile(x, y);
     if (!tile) return null;
-    if (tile.base === 'path') {
+    if (tile.base === 'path' || tile.base === 'water') {
       if (Math.abs(x - this.entrance.x) + Math.abs(y - this.entrance.y) < 2) return null;
       tile.base = 'grass';
-      return { type: 'path' };
+      return { type: tile.base };
     }
 
     const structure = this.structureAt(x, y);
@@ -101,15 +94,7 @@ export class GameMap {
     return out.sort((a, b) => a.dist - b.dist);
   }
 
-  serialize() {
-    return {
-      grid: this.grid,
-      entrance: this.entrance,
-      structures: this.structures,
-      nextStructureId: this.nextStructureId,
-    };
-  }
-
+  serialize() { return { grid: this.grid, entrance: this.entrance, structures: this.structures, nextStructureId: this.nextStructureId }; }
   restore(data) {
     this.grid = data.grid;
     this.entrance = data.entrance;

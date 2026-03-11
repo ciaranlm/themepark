@@ -8,14 +8,19 @@
   </head>
   <body>
     <header class="topbar sim-window">
+      <div class="park-title-wrap">
+        <div id="parkNameStat">Sunset Gardens</div>
+        <button id="parkSettingsBtn">Park Management</button>
+      </div>
       <div class="stat"><span class="ico">$</span><label>Cash</label><strong id="moneyStat">$0</strong></div>
       <div class="stat"><span class="ico">G</span><label>Guests</label><strong id="guestStat">0</strong></div>
       <div class="stat"><span class="ico">R</span><label>Rating</label><strong id="ratingStat">0</strong></div>
       <div class="stat"><span class="ico">P</span><label>Profit</label><strong id="profitStat">$0/day</strong></div>
-      <div class="objective" id="objectiveStat">Objective: Build your first path.</div>
+      <div class="stat"><span class="ico">E</span><label>Entry Fee</label><strong id="entryFeeStat">$0</strong></div>
+      <div class="objective" id="objectiveStat">Build paths and open your first rides.</div>
       <div class="time-controls sim-window">
         <div id="dayStat">Day 1</div>
-        <div id="timeState">Normal Speed</div>
+        <div id="timeState">Play x1</div>
         <div class="time-buttons">
           <button id="pauseBtn">Pause</button>
           <button id="playBtn">Play</button>
@@ -31,11 +36,13 @@
     <main class="layout">
       <aside class="panel sim-window" id="buildPanel">
         <h2>Build Tools</h2>
+        <div id="buildPreview"></div>
         <div id="buildButtons"></div>
       </aside>
 
       <section class="gameArea sim-window">
         <canvas id="gameCanvas" width="1100" height="700"></canvas>
+        <div id="notifications"></div>
       </section>
 
       <aside class="panel sim-window" id="infoPanel">
@@ -45,6 +52,25 @@
     </main>
 
     <footer class="statusbar sim-window" id="statusBar">Hover a tile for info. Left click place • Right click remove/refund.</footer>
+
+    <div id="parkModal" class="modal hidden">
+      <div class="modal-body sim-window">
+        <h3>Park Management</h3>
+        <label>Park Name</label>
+        <input id="parkNameInput" maxlength="30" />
+        <label>Entrance Fee</label>
+        <div class="fee-control">
+          <button id="feeDownBtn">-</button>
+          <input id="entryFeeInput" type="number" min="0" max="60" />
+          <button id="feeUpBtn">+</button>
+        </div>
+        <p id="feeReaction"></p>
+        <div class="modal-stats" id="managementStats"></div>
+        <div class="modal-actions">
+          <button id="closeParkModal">Close</button>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="js/main.js"></script>
   </body>
