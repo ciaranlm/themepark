@@ -10,6 +10,7 @@ export class UI {
     this.objectiveStat = document.getElementById('objectiveStat');
     this.buildButtons = document.getElementById('buildButtons');
     this.infoContent = document.getElementById('infoContent');
+    this.statusBar = document.getElementById('statusBar');
   }
 
   renderBuildPanel() {
@@ -19,7 +20,7 @@ export class UI {
       const btn = document.createElement('button');
       btn.className = `build-btn ${this.game.selectedBuild === b.id ? 'active' : ''} ${unlocked ? '' : 'locked'}`;
       btn.disabled = !unlocked;
-      btn.innerHTML = `<strong>${b.icon} ${b.name}</strong><br/><small>Cost: $${b.cost} • ${b.type}</small>`;
+      btn.innerHTML = `<strong>[${b.icon}] ${b.name}</strong><br/><small>$${b.cost} • ${b.type}</small>`;
       btn.onclick = () => {
         this.game.selectedBuild = b.id;
         this.renderBuildPanel();
@@ -34,9 +35,7 @@ export class UI {
     this.guestStat.textContent = `${guestManager.guests.length}`;
     this.ratingStat.textContent = `${Math.round(this.game.parkRating)}`;
     this.profitStat.textContent = `$${Math.round(economy.dailyProfit)}/day`;
-    this.objectiveStat.textContent = objectives.current
-      ? `Objective: ${objectives.current.text}`
-      : 'All objectives complete! Sandbox mode unlocked 🎉';
+    this.objectiveStat.textContent = objectives.current ? `Objective: ${objectives.current.text}` : 'All objectives complete!';
   }
 
   updateInfoPanel(selectedTile) {
@@ -46,19 +45,23 @@ export class UI {
 
     this.infoContent.innerHTML = `
       <div class="info-card">
-        <strong>Park Health</strong>
+        <strong>Park Mood</strong>
         <p>Guest happiness: ${avgH.toFixed(1)}%</p>
         <div class="progress"><span style="width:${avgH}%"></span></div>
         <p>Rating: ${Math.round(parkRating)}</p>
       </div>
       <div class="info-card">
-        <strong>Live Guests</strong>
-        <p>${guestManager.guests.slice(0, 5).map((g) => `${g.thought} H:${Math.round(g.happiness)}`).join('<br/>') || 'No guests yet'}</p>
+        <strong>Guest Feed</strong>
+        <p>${guestManager.guests.slice(0, 6).map((g) => `${g.thought.toUpperCase()} • H:${Math.round(g.happiness)}`).join('<br/>') || 'No guests yet'}</p>
       </div>
       <div class="info-card">
-        <strong>Selection</strong>
-        ${tileInfo ? `<p>${tileInfo.icon} ${tileInfo.name}</p><p>Ticket: $${tileInfo.ticket} • Upkeep: $${tileInfo.upkeep}</p>` : '<p>Click a tile to inspect.</p>'}
+        <strong>Tile Selection</strong>
+        ${tileInfo ? `<p>${tileInfo.name}</p><p>Ticket: $${tileInfo.ticket} • Upkeep: $${tileInfo.upkeep}</p>` : '<p>Hover or click a tile to inspect.</p>'}
       </div>
     `;
+  }
+
+  setHint(text) {
+    this.statusBar.textContent = text;
   }
 }

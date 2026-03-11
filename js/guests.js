@@ -1,6 +1,7 @@
 import { BUILDINGS } from './data.js';
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const palette = ['#eb6f5d', '#5c7fdb', '#d4a14a', '#78b36a', '#9f79d1'];
 
 export class GuestManager {
   constructor(gameMap, economy) {
@@ -14,10 +15,13 @@ export class GuestManager {
   spawn(count = 1) {
     for (let i = 0; i < count; i++) {
       const { x, y } = this.map.entrance;
+      const body = palette[Math.floor(Math.random() * palette.length)];
       this.guests.push({
         id: this.nextId++,
         x: x + 1,
         y,
+        drawX: x + 1,
+        drawY: y,
         happiness: 70 + Math.random() * 30,
         hunger: 20 + Math.random() * 20,
         energy: 70 + Math.random() * 20,
@@ -25,9 +29,11 @@ export class GuestManager {
         timeInPark: 0,
         stayDuration: 55 + Math.random() * 80,
         target: null,
-        thought: '😊',
+        thought: 'ok',
+        thoughtTimer: 0,
         moveCooldown: 0,
         stuckTime: 0,
+        palette: { body, head: '#f2d1b2' },
       });
     }
   }
@@ -49,8 +55,10 @@ export class GuestManager {
 
       if (!g.target || Math.random() < 0.03) g.target = this.chooseTarget(g);
       this.moveGuest(g, dt);
+      g.drawX += (g.x - g.drawX) * 0.35;
+      g.drawY += (g.y - g.drawY) * 0.35;
       this.tryInteract(g, game);
-      this.updateThought(g);
+      this.updateThought(g, dt);
     }
 
     const before = this.guests.length;
@@ -68,7 +76,7 @@ export class GuestManager {
   moveGuest(g, dt) {
     g.moveCooldown -= dt;
     if (g.moveCooldown > 0) return;
-    g.moveCooldown = 0.35;
+    g.moveCooldown = 0.28;
 
     const neighbors = this.map.pathNeighbors(g.x, g.y);
     if (!neighbors.length) {
@@ -80,9 +88,7 @@ export class GuestManager {
     const candidate = neighbors
       .map((n) => ({
         tile: n,
-        score: g.target
-          ? Math.abs(n.x - g.target.x) + Math.abs(n.y - g.target.y) + Math.random() * 1.5
-          : Math.random() * 5,
+        score: g.target ? Math.abs(n.x - g.target.x) + Math.abs(n.y - g.target.y) + Math.random() * 1.2 : Math.random() * 5,
       }))
       .sort((a, b) => a.score - b.score)[0].tile;
 
@@ -104,12 +110,12 @@ export class GuestManager {
       g.boredom = clamp(g.boredom - 45, 0, 100);
       g.energy = clamp(g.energy - 8, 0, 100);
       g.happiness = clamp(g.happiness + 10, 0, 100);
-      game.addFloatingText(`+$${b.ticket}`, g.x, g.y, '#26c281');
+      game.addFloatingText(`+$${b.ticket}`, g.x, g.y, '#d7f3d3');
     } else if (b.type === 'food' || b.type === 'drink') {
       game.economy.earn(b.ticket);
       g.hunger = clamp(g.hunger - 50, 0, 100);
       g.happiness = clamp(g.happiness + 7, 0, 100);
-      game.addFloatingText(`+$${b.ticket}`, g.x, g.y, '#ff6ea9');
+      game.addFloatingText(`+$${b.ticket}`, g.x, g.y, '#ffe7c4');
     } else if (b.type === 'restroom') {
       g.happiness = clamp(g.happiness + 4, 0, 100);
       g.energy = clamp(g.energy + 8, 0, 100);
@@ -117,13 +123,16 @@ export class GuestManager {
     g.target = null;
   }
 
-  updateThought(g) {
-    if (g.hunger > 75) g.thought = '🍔';
-    else if (g.boredom > 75) g.thought = '🎢';
-    else if (g.energy < 20) g.thought = '😴';
-    else if (g.stuckTime > 2) g.thought = '❓';
-    else if (g.happiness > 70) g.thought = '😄';
-    else g.thought = '🙂';
+  updateThought(g, dt) {
+    g.thoughtTimer = Math.max(0, g.thoughtTimer - dt);
+    if (Math.random() < 0.015) {
+      if (g.hunger > 75) g.thought = 'food';
+      else if (g.boredom > 75) g.thought = 'ride';
+      else if (g.energy < 20) g.thought = 'rest';
+      else if (g.stuckTime > 2) g.thought = 'lost';
+      else g.thought = 'fun';
+      g.thoughtTimer = 1.1;
+    }
   }
 
   averageHappiness() {
@@ -136,7 +145,7 @@ export class GuestManager {
   }
 
   restore(data) {
-    this.guests = data.guests;
+    this.guests = data.guests.map((g) => ({ ...g, drawX: g.drawX ?? g.x, drawY: g.drawY ?? g.y, thoughtTimer: g.thoughtTimer ?? 0 }));
     this.spawnTimer = data.spawnTimer;
     this.nextId = data.nextId;
   }
