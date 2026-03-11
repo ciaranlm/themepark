@@ -1,0 +1,104 @@
+:root {
+  --bg: #eff5ff;
+  --panel: #ffffff;
+  --primary: #3378ff;
+  --text: #1f2d3d;
+  --muted: #607086;
+  --good: #1fbf75;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, #f8fbff, #e7f2ff);
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: #fff;
+  border-bottom: 1px solid #dbe7fa;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3f8ff;
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+.objective { flex: 1; font-weight: 600; color: #345; }
+.actions button {
+  border: none;
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 280px;
+  gap: 10px;
+  padding: 10px;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid #dbe7fa;
+  border-radius: 14px;
+  padding: 12px;
+  height: calc(100vh - 90px);
+  overflow: auto;
+}
+.panel h2 { margin-top: 0; }
+#buildButtons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.build-btn {
+  text-align: left;
+  border: 1px solid #dbe7fa;
+  background: #f8fbff;
+  border-radius: 10px;
+  padding: 8px;
+  cursor: pointer;
+}
+.build-btn.active { border-color: var(--primary); background: #edf4ff; }
+.build-btn.locked { opacity: 0.5; cursor: not-allowed; }
+.gameArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+#gameCanvas {
+  border: 2px solid #c9ddfb;
+  border-radius: 12px;
+  image-rendering: pixelated;
+  background: #8ad36c;
+}
+.hint { color: var(--muted); font-size: 0.9rem; }
+.info-card {
+  background: #f5f8ff;
+  border: 1px solid #dbe7fa;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.progress {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #dde9ff;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--good);
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tiny Park Sim</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="stat"><span>💰</span><strong id="moneyStat">$0</strong></div>
+      <div class="stat"><span>🧍</span><strong id="guestStat">0</strong></div>
+      <div class="stat"><span>⭐</span><strong id="ratingStat">0</strong></div>
+      <div class="stat"><span>📈</span><strong id="profitStat">$0/day</strong></div>
+      <div class="objective" id="objectiveStat">Objective: Build your first path.</div>
+      <div class="actions">
+        <button id="saveBtn">Save</button>
+        <button id="loadBtn">Load</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel left" id="buildPanel">
+        <h2>Build</h2>
+        <div id="buildButtons"></div>
+      </aside>
+
+      <section class="gameArea">
+        <canvas id="gameCanvas" width="640" height="640"></canvas>
+        <div class="hint">Left click to place. Right click to remove (refund 50%).</div>
+      </section>
+
+      <aside class="panel right" id="infoPanel">
+        <h2>Info</h2>
+        <div id="infoContent"></div>
+      </aside>
+    </main>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
