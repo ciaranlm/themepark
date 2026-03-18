@@ -77,23 +77,25 @@ export class IsoRenderer {
       }
     }
 
-    if (game.hoverTile) {
-      const check = PlacementSystem.validatePlacement(game.map, game.hoverTile.x, game.hoverTile.y, game.selectedBuild, game.economy, game.objectives);
+    const state = game.state.snapshot;
+
+    if (state.hoverTile) {
+      const check = PlacementSystem.validatePlacement(game.map, state.hoverTile.x, state.hoverTile.y, state.selectedBuild, game.economy, game.objectives);
       for (const t of check.tiles) {
         if (!game.map.inBounds(t.x, t.y)) continue;
         const p = this.gridToScreen(t.x, t.y);
         drawDiamond(ctx, p.x, p.y, this.tileW, this.tileH, check.valid ? 'rgba(90,200,235,0.35)' : 'rgba(220,75,80,0.35)', check.valid ? '#7dd6f1' : '#da5757');
       }
-      if (check.valid && BUILDING_DEFINITIONS[game.selectedBuild].kind !== 'path' && BUILDING_DEFINITIONS[game.selectedBuild].kind !== 'terrain') {
-        const def = BUILDING_DEFINITIONS[game.selectedBuild];
-        const center = this.gridToScreen(game.hoverTile.x + def.width / 2 - 0.5, game.hoverTile.y + def.height / 2 - 0.5);
+      if (check.valid && BUILDING_DEFINITIONS[state.selectedBuild].kind !== 'path' && BUILDING_DEFINITIONS[state.selectedBuild].kind !== 'terrain') {
+        const def = BUILDING_DEFINITIONS[state.selectedBuild];
+        const center = this.gridToScreen(state.hoverTile.x + def.width / 2 - 0.5, state.hoverTile.y + def.height / 2 - 0.5);
         ctx.globalAlpha = 0.45;
         drawStructure(ctx, def.visualType, center.x, center.y + this.tileH / 2, time * 0.7);
         ctx.globalAlpha = 1;
       }
     }
 
-    for (const t of game.floatingTexts) {
+    for (const t of state.floatingTexts) {
       const p = this.gridToScreen(t.x, t.y);
       ctx.globalAlpha = Math.max(0.25, t.life);
       ctx.fillStyle = t.color;

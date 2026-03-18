@@ -1,3 +1,9 @@
+/**
+ * Ride simulation and park scoring.
+ *
+ * Centralizes ride/facility counting and park-rating math so future balance
+ * changes have one clear home without coupling them to rendering or input.
+ */
 export class Simulation {
   constructor(game) {
     this.game = game;
@@ -18,7 +24,7 @@ export class Simulation {
     const polish = Math.min(20, scenery * 1.5 + facilities * 2.6);
     const thrillScore = Math.min(15, thrill / 20);
     const crowdingPenalty = Math.max(0, this.game.guestManager.guests.length - (rideCount * 18 + stallCount * 12 + 20)) * 0.28;
-    this.game.parkRating = Math.max(1, Math.min(100, happiness * 0.5 + variety + polish + thrillScore - crowdingPenalty));
+    this.game.state.patch({ parkRating: Math.max(1, Math.min(100, happiness * 0.5 + variety + polish + thrillScore - crowdingPenalty)) });
     return { totalUpkeep };
   }
 }

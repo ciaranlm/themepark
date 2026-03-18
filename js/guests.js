@@ -22,13 +22,14 @@ export class GuestManager {
       target: null, thought: 'ok', thoughtTimer: 0, moveCooldown: 0, interactCooldown: 0, stuckTime: 0,
       palette: { body, head: '#f2d1b2' },
     });
-    this.economy.earn(game.entryFee);
+    this.economy.earn(game.state.snapshot.entryFee);
   }
 
   update(dt, game) {
-    const feePenalty = Math.max(0, game.entryFee - 20) * 0.018;
-    const feeBonus = game.entryFee <= 5 ? 0.12 : 0;
-    const arrivalRate = clamp((0.08 + game.parkRating / 650) - feePenalty + feeBonus, 0.03, 0.45);
+    const { entryFee, parkRating } = game.state.snapshot;
+    const feePenalty = Math.max(0, entryFee - 20) * 0.018;
+    const feeBonus = entryFee <= 5 ? 0.12 : 0;
+    const arrivalRate = clamp((0.08 + parkRating / 650) - feePenalty + feeBonus, 0.03, 0.45);
     this.spawnTimer += dt;
     if (this.spawnTimer > 1 / arrivalRate) {
       this.spawn(game);
@@ -42,7 +43,7 @@ export class GuestManager {
       g.thirst = clamp(g.thirst + dt * 1.2, 0, 100);
       g.energy = clamp(g.energy - dt * 0.65, 0, 100);
       g.boredom = clamp(g.boredom + dt * 0.85, 0, 100);
-      if (g.hunger > 70 || g.boredom > 70 || g.thirst > 75 || game.entryFee > 30) g.happiness = clamp(g.happiness - dt * 1.5, 0, 100);
+      if (g.hunger > 70 || g.boredom > 70 || g.thirst > 75 || entryFee > 30) g.happiness = clamp(g.happiness - dt * 1.5, 0, 100);
 
       if (!g.target || Math.random() < 0.008) g.target = this.chooseTarget(g);
       this.moveGuest(g, dt);
@@ -92,7 +93,7 @@ export class GuestManager {
       g.target.usageCount += 1;
       g.target.guestsServed += 1;
       g.interactCooldown = 4.8;
-      game.addFloatingText(`+$${g.target.ticketPrice}`, g.x, g.y, '#d7f3d3');
+      game.ui.addFloatingText(`+$${g.target.ticketPrice}`, g.x, g.y, '#d7f3d3');
     } else if (b.kind === 'food' || b.kind === 'drink') {
       game.economy.earn(g.target.ticketPrice);
       if (b.effects?.hunger) g.hunger = clamp(g.hunger + b.effects.hunger, 0, 100);
@@ -100,7 +101,7 @@ export class GuestManager {
       g.happiness = clamp(g.happiness + 5, 0, 100);
       g.target.guestsServed += 1;
       g.interactCooldown = 6;
-      game.addFloatingText(`+$${g.target.ticketPrice}`, g.x, g.y, '#ffe7c4');
+      game.ui.addFloatingText(`+$${g.target.ticketPrice}`, g.x, g.y, '#ffe7c4');
     } else if (b.kind === 'restroom') {
       g.happiness = clamp(g.happiness + 3, 0, 100);
       g.energy = clamp(g.energy + 6, 0, 100);
