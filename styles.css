@@ -58,3 +58,12 @@ button:hover { background: #a6bad0; }
 
 .warning-text { color: #7a2323; font-weight: 700; }
 .ok-text { color: #204b2d; font-weight: 700; }
+
+
+#thoughtsContent { display: grid; gap: 6px; }
+.thought-card { background: #b2c2d2; border: 1px solid #3f566f; padding: 5px; }
+.thought-card p { margin: 4px 0; font-weight: 700; }
+.thought-card small { color: #294760; }
+.thought-card.positive { background: #c8dfbb; border-color: #56724c; }
+.thought-card.warning { background: #d9c0b6; border-color: #7c584c; }
+.thought-card.need { background: #d8d2b1; border-color: #77693c; }

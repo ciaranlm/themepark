@@ -36,6 +36,9 @@ export class RideSystem {
         if (!guest) continue;
         guest.mode = 'riding';
         guest.queuedRideId = structure.uid;
+        guest.target = null;
+        guest.queueComplaintRideId = null;
+        guest.priceComplaintRideId = null;
         guest.x = structure.accessPoint?.x ?? guest.x;
         guest.y = structure.accessPoint?.y ?? guest.y;
         guest.money = Math.max(0, guest.money - structure.ticketPrice);
@@ -84,6 +87,7 @@ export class RideSystem {
       }
       structure.guestsServed += structure.riders.length;
       structure.usageCount += structure.riders.length;
+      structure.lastQueueLength = structure.queue.length;
       structure.riders = [];
       structure.operatingState = structure.queue.length > 0 ? 'loading' : 'idle';
       structure.stateTimer = structure.operatingState === 'loading'
