@@ -106,7 +106,13 @@ export class UI {
         btn.disabled = !unlocked;
         btn.title = `${b.name} (${b.width}x${b.height})\nCost $${b.cost} • Upkeep $${b.upkeep}\n${unlocked ? 'Available' : this.game.objectives.lockReason(b)}`;
         btn.innerHTML = `<strong>${b.name}</strong><small>$${b.cost} • ${b.width}x${b.height}</small><em>${status === 'locked' ? this.game.objectives.lockReason(b) : status === 'new' ? 'Newly unlocked!' : 'Available'}</em>`;
-        btn.onclick = () => { this.game.state.patch({ selectedBuild: b.id }); this.renderBuildPanel(); this.updateInfoPanel(this.game.state.snapshot.selectedTile); };
+        btn.onclick = () => {
+          this.game.state.patch({ selectedBuild: b.id });
+          this.game.inputSystem?.refreshPlacementPreview();
+          this.renderBuildPanel();
+          this.updateInfoPanel(this.game.state.snapshot.selectedTile);
+          this.setHint(`Selected ${b.name}. Move cursor over map to preview placement.`);
+        };
         grid.appendChild(btn);
       });
       wrap.appendChild(grid);
@@ -146,7 +152,7 @@ export class UI {
 
   updateInfoPanel(hoverTile) {
     const { guestManager } = this.game;
-    const { parkRating, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue } = this.game.state.snapshot;
+    const { parkRating, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue, placementPreview } = this.game.state.snapshot;
     const avgH = guestManager.averageHappiness();
     const build = BUILDING_DEFINITIONS[selectedBuild];
     const hover = hoverTile ? this.game.map.getTile(hoverTile.x, hoverTile.y) : null;
@@ -172,7 +178,8 @@ export class UI {
       <p>Cost $${build.cost} • Upkeep $${build.upkeep}</p>
       <p>Status: ${this.game.objectives.stateFor(build)} ${this.game.objectives.stateFor(build) === 'locked' ? `• ${this.game.objectives.lockReason(build)}` : ''}</p></div>
       <div class="info-card"><strong>Hover Tile</strong>
-      <p>${hoverTile ? `Tile ${hoverTile.x},${hoverTile.y} • Terrain ${hover?.base || 'grass'}` : 'Move cursor over map.'}</p></div>`;
+      <p>${hoverTile ? `Tile ${hoverTile.x},${hoverTile.y} • Terrain ${hover?.base || 'grass'}` : 'Move cursor over map.'}</p>
+      <p>${placementPreview ? `Placement: ${placementPreview.valid ? 'Valid' : placementPreview.reason}` : 'Placement preview inactive.'}</p></div>`;
   }
 
 

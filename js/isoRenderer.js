@@ -1,6 +1,5 @@
 import { GRID_SIZE, BUILDING_DEFINITIONS } from './rideDefinitions.js';
 import { drawGuest, drawStructure } from './entityRenderer.js';
-import { PlacementSystem } from './placement.js';
 
 const drawDiamond = (ctx, x, y, w, h, color, stroke = '#00000055') => {
   ctx.beginPath();
@@ -47,6 +46,42 @@ export class IsoRenderer {
     }
   }
 
+  drawPlacementPreview(game, time) {
+    const ctx = this.ctx;
+    const state = game.state.snapshot;
+    const preview = state.placementPreview;
+    const build = BUILDING_DEFINITIONS[state.selectedBuild];
+    if (!state.hoverTile || !preview || !build) return;
+
+    const pulse = 0.78 + Math.sin(time * 8) * 0.08;
+    for (const t of preview.tiles) {
+      if (!game.map.inBounds(t.x, t.y)) continue;
+      const p = this.gridToScreen(t.x, t.y);
+      const blocked = preview.blockedTiles?.some((tile) => tile.x === t.x && tile.y === t.y);
+      const fill = blocked || !preview.valid ? 'rgba(226,78,84,0.32)' : 'rgba(88,214,123,0.26)';
+      const stroke = blocked || !preview.valid ? `rgba(255,108,108,${pulse})` : `rgba(134,255,174,${pulse})`;
+      drawDiamond(ctx, p.x, p.y, this.tileW, this.tileH, fill, stroke);
+      ctx.strokeStyle = blocked ? 'rgba(128,26,26,0.75)' : stroke;
+      ctx.lineWidth = blocked ? 2 : 1.25;
+      ctx.beginPath();
+      ctx.moveTo(p.x - 7, p.y + 4);
+      ctx.lineTo(p.x + 7, p.y + 11);
+      ctx.moveTo(p.x + 7, p.y + 4);
+      ctx.lineTo(p.x - 7, p.y + 11);
+      if (blocked) ctx.stroke();
+    }
+    ctx.lineWidth = 1;
+
+    if (build.kind === 'path' || build.kind === 'terrain') return;
+
+    const center = this.gridToScreen(state.hoverTile.x + build.width / 2 - 0.5, state.hoverTile.y + build.height / 2 - 0.5);
+    ctx.save();
+    ctx.globalAlpha = preview.valid ? 0.5 : 0.28;
+    if (!preview.valid) ctx.filter = 'grayscale(0.15) saturate(0.8)';
+    drawStructure(ctx, build.visualType, center.x, center.y + this.tileH / 2, time * 0.7);
+    ctx.restore();
+  }
+
   draw(game, time) {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -60,6 +95,8 @@ export class IsoRenderer {
         if (tile.base === 'entrance') drawDiamond(ctx, p.x, p.y + 1, this.tileW - 6, this.tileH - 4, '#496b95');
       }
     }
+
+    this.drawPlacementPreview(game, time);
 
     for (const s of Object.values(this.map.structures)) drawQueue.push({ depth: s.x + s.y + s.width + s.height + 0.2, structure: s });
     for (const g of game.guestManager.guests) drawQueue.push({ depth: g.drawX + g.drawY + 0.18, guest: g });
@@ -78,22 +115,6 @@ export class IsoRenderer {
     }
 
     const state = game.state.snapshot;
-
-    if (state.hoverTile) {
-      const check = PlacementSystem.validatePlacement(game.map, state.hoverTile.x, state.hoverTile.y, state.selectedBuild, game.economy, game.objectives);
-      for (const t of check.tiles) {
-        if (!game.map.inBounds(t.x, t.y)) continue;
-        const p = this.gridToScreen(t.x, t.y);
-        drawDiamond(ctx, p.x, p.y, this.tileW, this.tileH, check.valid ? 'rgba(90,200,235,0.35)' : 'rgba(220,75,80,0.35)', check.valid ? '#7dd6f1' : '#da5757');
-      }
-      if (check.valid && BUILDING_DEFINITIONS[state.selectedBuild].kind !== 'path' && BUILDING_DEFINITIONS[state.selectedBuild].kind !== 'terrain') {
-        const def = BUILDING_DEFINITIONS[state.selectedBuild];
-        const center = this.gridToScreen(state.hoverTile.x + def.width / 2 - 0.5, state.hoverTile.y + def.height / 2 - 0.5);
-        ctx.globalAlpha = 0.45;
-        drawStructure(ctx, def.visualType, center.x, center.y + this.tileH / 2, time * 0.7);
-        ctx.globalAlpha = 1;
-      }
-    }
 
     for (const t of state.floatingTexts) {
       const p = this.gridToScreen(t.x, t.y);
