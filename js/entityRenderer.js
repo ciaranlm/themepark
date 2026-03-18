@@ -47,6 +47,12 @@ export const drawStructure = (ctx, type, x, y, anim, scale = 1) => {
     ctx.strokeStyle = '#a0b5c7'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-12, -4); ctx.lineTo(-6, -22); ctx.moveTo(12, -4); ctx.lineTo(6, -22); ctx.stroke();
     ctx.fillStyle = '#7a4a39'; ctx.beginPath(); ctx.ellipse(0, -13 + Math.sin(anim) * 3, 10, 4, Math.sin(anim) * 0.2, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#d8c289'; ctx.beginPath(); ctx.moveTo(-6, -22); ctx.lineTo(6, -22); ctx.stroke();
+  } else if (type === 'bumperCars') {
+    shadow(ctx, 0, 2, 18, 6);
+    ctx.fillStyle = '#6b87a6'; ctx.fillRect(-12, -12, 24, 10);
+    ctx.strokeStyle = '#d9edf8'; ctx.strokeRect(-12, -12, 24, 10);
+    ctx.fillStyle = '#d85c52'; ctx.fillRect(-8 + Math.sin(anim * 1.6) * 4, -8, 6, 4);
+    ctx.fillStyle = '#f0d56f'; ctx.fillRect(2 - Math.cos(anim * 1.4) * 4, -4, 6, 4);
   } else if (type === 'dropTower') {
     shadow(ctx, 0, 2, 10, 4);
     ctx.fillStyle = '#5e84ab'; ctx.fillRect(-3, -34, 6, 30);

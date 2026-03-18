@@ -40,8 +40,8 @@ export class GameMap {
   placeStructure(x, y, definition) {
     const structure = {
       uid: this.nextStructureId++, id: definition.id, name: definition.name, x, y,
-      width: definition.width, height: definition.height, ticketPrice: definition.ticket,
-      upkeep: definition.upkeep, excitement: definition.excitement, capacity: definition.capacity,
+      width: definition.width, height: definition.height, ticketPrice: definition.ticketPrice,
+      upkeep: definition.upkeep, excitement: definition.excitement, intensity: definition.intensity, nausea: definition.nausea, capacity: definition.capacity, cycleTime: definition.cycleTime,
       usageCount: 0, operating: true, guestsServed: 0, serviceTimer: 0,
     };
     this.structures[structure.uid] = structure;

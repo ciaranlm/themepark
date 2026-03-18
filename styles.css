@@ -30,7 +30,9 @@ button:hover { background: #a6bad0; }
 .build-btn small { color: #233a51; }
 .build-btn em { font-style: normal; font-size: 10px; color: #1f4965; }
 .build-btn.active { background: #90badb; border-color: #204f78; outline: 1px solid #cde6f9; }
-.build-btn.locked { opacity: 0.6; cursor: not-allowed; }
+.build-btn.locked { background: #b9a7a7; border-color: #7a5151; }
+.build-btn.unaffordable { background: #bfb4a2; }
+.build-btn.locked em, .build-btn.unaffordable em { color: #583331; }
 .build-btn.new { background: #b8db96; }
 .gameArea { position: relative; padding: 6px; display: flex; align-items: center; justify-content: center; background: linear-gradient(#7890ab, #5f7995); }
 #gameCanvas { border: 2px solid #24364d; background: #5f8b47; image-rendering: pixelated; max-width: 100%; height: auto; cursor: crosshair; transition: box-shadow 0.08s ease, outline-color 0.08s ease, cursor 0.08s ease; }

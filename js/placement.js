@@ -10,6 +10,10 @@ export class PlacementSystem {
   static validatePlacement(map, x, y, id, economy, objectives) {
     const def = BUILDING_DEFINITIONS[id];
     if (!def) return { valid: false, reason: 'Unknown build item.', tiles: [], blockedTiles: [] };
+    const minSize = def.placement?.minSize;
+    if (minSize && (def.width < minSize.width || def.height < minSize.height)) {
+      return { valid: false, reason: `${def.name} must be at least ${minSize.width}x${minSize.height}.`, tiles: this.footprintTiles(x, y, def), blockedTiles: [] };
+    }
     if (objectives && !objectives.isUnlocked(def)) {
       return {
         valid: false,

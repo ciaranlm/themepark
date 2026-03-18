@@ -1,1 +1,1 @@
-export { GRID_SIZE, BUILDING_DEFINITIONS as BUILDINGS, OBJECTIVES } from './rideDefinitions.js';
+export { GRID_SIZE, BUILDING_DEFINITIONS as BUILDINGS, RIDE_CATALOGUE } from './rideDefinitions.js';
