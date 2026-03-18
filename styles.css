@@ -33,7 +33,10 @@ button:hover { background: #a6bad0; }
 .build-btn.locked { opacity: 0.6; cursor: not-allowed; }
 .build-btn.new { background: #b8db96; }
 .gameArea { position: relative; padding: 6px; display: flex; align-items: center; justify-content: center; background: linear-gradient(#7890ab, #5f7995); }
-#gameCanvas { border: 2px solid #24364d; background: #5f8b47; image-rendering: pixelated; max-width: 100%; height: auto; }
+#gameCanvas { border: 2px solid #24364d; background: #5f8b47; image-rendering: pixelated; max-width: 100%; height: auto; cursor: crosshair; transition: box-shadow 0.08s ease, outline-color 0.08s ease, cursor 0.08s ease; }
+#gameCanvas.cursor-build-valid { cursor: copy; box-shadow: 0 0 0 2px rgba(108, 235, 144, 0.35); }
+#gameCanvas.cursor-build-invalid { cursor: not-allowed; box-shadow: 0 0 0 2px rgba(240, 99, 99, 0.38); }
+#gameCanvas.cursor-remove { cursor: alias; box-shadow: 0 0 0 2px rgba(255, 206, 111, 0.35); }
 #notifications { position: absolute; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
 .toast { background: rgba(15, 35, 56, 0.85); color: #d7edf8; border: 1px solid #7ca4c8; padding: 4px 8px; font-weight: 700; }
 .info-card { background: #b2c2d2; border: 1px solid #3f566f; padding: 5px; margin-bottom: 6px; }

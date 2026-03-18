@@ -12,6 +12,7 @@ export class GameStateStore {
       selectedTile: null,
       selectedStructure: null,
       hoverTile: null,
+      placementPreview: null,
       parkRating: 65,
       parkName: 'Sunset Gardens',
       entryFee: 10,
@@ -54,6 +55,7 @@ export class GameStateStore {
       selectedTile: data.selectedTile ?? null,
       selectedStructure: data.selectedStructure ?? null,
       hoverTile: data.hoverTile ?? null,
+      placementPreview: data.placementPreview ?? null,
       floatingTexts: Array.isArray(data.floatingTexts) ? data.floatingTexts : [],
       lastFrameAt: performance.now(),
     };
