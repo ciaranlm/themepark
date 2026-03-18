@@ -55,3 +55,6 @@ button:hover { background: #a6bad0; }
 #entryFeeInput, #parkNameInput { width: 100%; }
 .modal-stats { background: #b9c9d9; border: 1px solid #415872; padding: 6px; display: grid; gap: 3px; }
 .modal-actions { display: flex; justify-content: flex-end; }
+
+.warning-text { color: #7a2323; font-weight: 700; }
+.ok-text { color: #204b2d; font-weight: 700; }

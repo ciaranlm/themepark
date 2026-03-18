@@ -141,7 +141,7 @@ export class InputSystem {
     const tileData = this.map.getTile(tile.x, tile.y);
     const hoverStructure = this.map.structureAt(tile.x, tile.y);
     const hoverSummary = hoverStructure
-      ? `${hoverStructure.name} ${hoverStructure.width}x${hoverStructure.height}`
+      ? `${hoverStructure.name} ${hoverStructure.width}x${hoverStructure.height}${hoverStructure.connected === false ? ' • NO PATH' : ''}`
       : `${tileData.base}${tileData.structureId ? ' • occupied' : ''}`;
     const placementState = check.valid ? 'valid' : check.reason;
     this.ui.setHint(`Tile (${tile.x},${tile.y}) • ${hoverSummary} • Placement ${placementState} • Zoom ${(this.renderer.camera.zoom * 100).toFixed(0)}% • ${this.ui.timeLabel()}`);

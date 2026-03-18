@@ -166,13 +166,18 @@ export class UI {
 
     if (selectedStructure) {
       const structureDef = definitions[selectedStructure.id];
-      const status = !selectedStructure.operating ? 'paused' : selectedStructure.usageCount < 2 ? 'idle' : selectedStructure.usageCount > 25 ? 'busy' : 'operating';
+      const connectionText = selectedStructure.connected === false ? 'NOT CONNECTED to entrance paths' : 'Connected to entrance paths';
+      const queueCount = selectedStructure.queue?.length ?? 0;
+      const riders = selectedStructure.riders?.length ?? 0;
+      const status = selectedStructure.operatingState || (!selectedStructure.operating ? 'closed' : selectedStructure.usageCount < 2 ? 'idle' : selectedStructure.usageCount > 25 ? 'busy' : 'operating');
       this.infoContent.innerHTML = `
       <div class="info-card"><strong>${selectedStructure.name}</strong>
       <p>Footprint: ${selectedStructure.width}x${selectedStructure.height}</p>
       <p>Build: $${structureDef?.cost ?? 0} • Ticket: $${selectedStructure.ticketPrice} • Upkeep: $${selectedStructure.upkeep}</p>
       <p>Exc: ${selectedStructure.excitement} • Int: ${selectedStructure.intensity} • Nau: ${selectedStructure.nausea}</p><p>Capacity: ${selectedStructure.capacity} • Cycle: ${selectedStructure.cycleTime}s</p>
-      <p>Status: ${status} • Guests served: ${selectedStructure.guestsServed}</p></div>`;
+      <p>Status: ${status} • Guests served: ${selectedStructure.guestsServed}</p>
+      <p>Queue: ${queueCount} • Riders: ${riders}</p>
+      <p class="${selectedStructure.connected === false ? 'warning-text' : 'ok-text'}">${connectionText}</p></div>`;
       return;
     }
 
@@ -188,7 +193,7 @@ export class UI {
       <p>Status: ${this.game.objectives.stateFor(build)} ${this.game.objectives.stateFor(build) === 'locked' ? `• ${this.game.objectives.lockReason(build)}` : this.game.economy.canAfford(build.cost) ? '• Ready to build now' : `• Need $${Math.ceil(build.cost - this.game.economy.money)} more`}</p></div>
       <div class="info-card"><strong>Hover Tile</strong>
       <p>${hoverTile ? `Tile ${hoverTile.x},${hoverTile.y} • Terrain ${hover?.base || 'grass'}` : 'Move cursor over map.'}</p>
-      <p>${placementPreview ? `Placement: ${placementPreview.valid ? 'Valid' : placementPreview.reason}` : 'Placement preview inactive.'}</p></div>`;
+      <p>${hoverTile && hover?.base === 'entrance' ? 'Guests spawn here and must use connected paths.' : placementPreview ? `Placement: ${placementPreview.valid ? 'Valid' : placementPreview.reason}` : 'Placement preview inactive.'}</p></div>`;
   }
 
 
