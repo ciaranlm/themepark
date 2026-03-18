@@ -37,6 +37,7 @@ button:hover { background: #a6bad0; }
 #gameCanvas.cursor-build-valid { cursor: copy; box-shadow: 0 0 0 2px rgba(108, 235, 144, 0.35); }
 #gameCanvas.cursor-build-invalid { cursor: not-allowed; box-shadow: 0 0 0 2px rgba(240, 99, 99, 0.38); }
 #gameCanvas.cursor-remove { cursor: alias; box-shadow: 0 0 0 2px rgba(255, 206, 111, 0.35); }
+#gameCanvas.cursor-pan { cursor: grabbing; box-shadow: 0 0 0 2px rgba(140, 204, 255, 0.3); }
 #notifications { position: absolute; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
 .toast { background: rgba(15, 35, 56, 0.85); color: #d7edf8; border: 1px solid #7ca4c8; padding: 4px 8px; font-weight: 700; }
 .info-card { background: #b2c2d2; border: 1px solid #3f566f; padding: 5px; margin-bottom: 6px; }

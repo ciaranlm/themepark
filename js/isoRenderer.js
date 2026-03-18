@@ -13,17 +13,79 @@ export class IsoRenderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.map = map;
-    this.tileW = 30;
-    this.tileH = 15;
+    this.baseTileW = 30;
+    this.baseTileH = 15;
+    this.tileW = this.baseTileW;
+    this.tileH = this.baseTileH;
     this.originX = canvas.width / 2;
     this.originY = 60;
+    this.camera = {
+      offsetX: 0,
+      offsetY: 0,
+      zoom: 1,
+      minZoom: 0.5,
+      maxZoom: 2.5,
+    };
   }
 
-  gridToScreen(x, y) { return { x: this.originX + (x - y) * (this.tileW / 2), y: this.originY + (x + y) * (this.tileH / 2) }; }
-  screenToGrid(sx, sy) {
-    const x = ((sx - this.originX) / (this.tileW / 2) + (sy - this.originY) / (this.tileH / 2)) / 2;
-    const y = ((sy - this.originY) / (this.tileH / 2) - (sx - this.originX) / (this.tileW / 2)) / 2;
+  updateTileMetrics() {
+    this.tileW = this.baseTileW * this.camera.zoom;
+    this.tileH = this.baseTileH * this.camera.zoom;
+  }
+
+  worldToScreen(worldX, worldY) {
+    return {
+      x: this.originX + this.camera.offsetX + worldX * this.camera.zoom,
+      y: this.originY + this.camera.offsetY + worldY * this.camera.zoom,
+    };
+  }
+
+  screenToWorld(screenX, screenY) {
+    return {
+      x: (screenX - this.originX - this.camera.offsetX) / this.camera.zoom,
+      y: (screenY - this.originY - this.camera.offsetY) / this.camera.zoom,
+    };
+  }
+
+  gridToWorld(x, y) {
+    return {
+      x: (x - y) * (this.baseTileW / 2),
+      y: (x + y) * (this.baseTileH / 2),
+    };
+  }
+
+  gridToScreen(x, y) {
+    const world = this.gridToWorld(x, y);
+    return this.worldToScreen(world.x, world.y);
+  }
+
+  worldToGrid(worldX, worldY) {
+    const x = (worldX / (this.baseTileW / 2) + worldY / (this.baseTileH / 2)) / 2;
+    const y = (worldY / (this.baseTileH / 2) - worldX / (this.baseTileW / 2)) / 2;
     return { x: Math.floor(x), y: Math.floor(y) };
+  }
+
+  screenToGrid(screenX, screenY) {
+    const world = this.screenToWorld(screenX, screenY);
+    return this.worldToGrid(world.x, world.y);
+  }
+
+  panBy(screenDx, screenDy) {
+    this.camera.offsetX += screenDx;
+    this.camera.offsetY += screenDy;
+  }
+
+  zoomAt(screenX, screenY, delta) {
+    const previousZoom = this.camera.zoom;
+    const nextZoom = Math.max(this.camera.minZoom, Math.min(this.camera.maxZoom, previousZoom * delta));
+    if (nextZoom === previousZoom) return previousZoom;
+
+    const world = this.screenToWorld(screenX, screenY);
+    this.camera.zoom = nextZoom;
+    this.updateTileMetrics();
+    this.camera.offsetX = screenX - this.originX - world.x * nextZoom;
+    this.camera.offsetY = screenY - this.originY - world.y * nextZoom;
+    return nextZoom;
   }
 
   drawBaseTile(ctx, x, y, tile, time) {
@@ -33,7 +95,7 @@ export class IsoRenderer {
     if (tile.base === 'water') {
       const shimmer = Math.sin(time * 2.2 + tile.x * 0.3 + tile.y * 0.2) * 8;
       drawDiamond(ctx, x, y, this.tileW, this.tileH, water[tile.waterVariant], 'rgba(20,62,102,0.35)');
-      drawDiamond(ctx, x, y + 2, this.tileW - 5, this.tileH - 6, `rgba(120,200,255,${0.16 + shimmer / 80})`, null);
+      drawDiamond(ctx, x, y + 2 * this.camera.zoom, this.tileW - 5 * this.camera.zoom, this.tileH - 6 * this.camera.zoom, `rgba(120,200,255,${0.16 + shimmer / 80})`, null);
       return;
     }
 
@@ -41,8 +103,8 @@ export class IsoRenderer {
     drawDiamond(ctx, x, y, this.tileW, this.tileH, color, 'rgba(0,0,0,0.13)');
     if (tile.base !== 'path' && tile.base !== 'entrance' && tile.grassVariant % 2 === 0) {
       ctx.fillStyle = 'rgba(80,130,48,0.24)';
-      ctx.fillRect(x - 2, y + 5, 2, 1);
-      ctx.fillRect(x + 3, y + 6, 2, 1);
+      ctx.fillRect(x - 2 * this.camera.zoom, y + 5 * this.camera.zoom, 2 * this.camera.zoom, 1 * this.camera.zoom);
+      ctx.fillRect(x + 3 * this.camera.zoom, y + 6 * this.camera.zoom, 2 * this.camera.zoom, 1 * this.camera.zoom);
     }
   }
 
@@ -62,12 +124,12 @@ export class IsoRenderer {
       const stroke = blocked || !preview.valid ? `rgba(255,108,108,${pulse})` : `rgba(134,255,174,${pulse})`;
       drawDiamond(ctx, p.x, p.y, this.tileW, this.tileH, fill, stroke);
       ctx.strokeStyle = blocked ? 'rgba(128,26,26,0.75)' : stroke;
-      ctx.lineWidth = blocked ? 2 : 1.25;
+      ctx.lineWidth = (blocked ? 2 : 1.25) * this.camera.zoom;
       ctx.beginPath();
-      ctx.moveTo(p.x - 7, p.y + 4);
-      ctx.lineTo(p.x + 7, p.y + 11);
-      ctx.moveTo(p.x + 7, p.y + 4);
-      ctx.lineTo(p.x - 7, p.y + 11);
+      ctx.moveTo(p.x - 7 * this.camera.zoom, p.y + 4 * this.camera.zoom);
+      ctx.lineTo(p.x + 7 * this.camera.zoom, p.y + 11 * this.camera.zoom);
+      ctx.moveTo(p.x + 7 * this.camera.zoom, p.y + 4 * this.camera.zoom);
+      ctx.lineTo(p.x - 7 * this.camera.zoom, p.y + 11 * this.camera.zoom);
       if (blocked) ctx.stroke();
     }
     ctx.lineWidth = 1;
@@ -78,12 +140,13 @@ export class IsoRenderer {
     ctx.save();
     ctx.globalAlpha = preview.valid ? 0.5 : 0.28;
     if (!preview.valid) ctx.filter = 'grayscale(0.15) saturate(0.8)';
-    drawStructure(ctx, build.visualType, center.x, center.y + this.tileH / 2, time * 0.7);
+    drawStructure(ctx, build.visualType, center.x, center.y + this.tileH / 2, time * 0.7, this.camera.zoom);
     ctx.restore();
   }
 
   draw(game, time) {
     const ctx = this.ctx;
+    this.updateTileMetrics();
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     const drawQueue = [];
@@ -92,7 +155,7 @@ export class IsoRenderer {
         const tile = this.map.grid[y][x];
         const p = this.gridToScreen(x, y);
         this.drawBaseTile(ctx, p.x, p.y, tile, time);
-        if (tile.base === 'entrance') drawDiamond(ctx, p.x, p.y + 1, this.tileW - 6, this.tileH - 4, '#496b95');
+        if (tile.base === 'entrance') drawDiamond(ctx, p.x, p.y + this.camera.zoom, this.tileW - 6 * this.camera.zoom, this.tileH - 4 * this.camera.zoom, '#496b95');
       }
     }
 
@@ -105,12 +168,12 @@ export class IsoRenderer {
     for (const item of drawQueue) {
       if (item.guest) {
         const p = this.gridToScreen(item.guest.drawX, item.guest.drawY);
-        drawGuest(ctx, p.x, p.y + this.tileH / 2, item.guest.palette.body, item.guest.palette.head, Math.sin(time * 8 + item.guest.id) * 0.3);
+        drawGuest(ctx, p.x, p.y + this.tileH / 2, item.guest.palette.body, item.guest.palette.head, Math.sin(time * 8 + item.guest.id) * 0.3, this.camera.zoom);
       } else {
         const s = item.structure;
         const anchor = this.gridToScreen(s.x + s.width / 2 - 0.5, s.y + s.height / 2 - 0.5);
         const def = BUILDING_DEFINITIONS[s.id];
-        drawStructure(ctx, def.visualType, anchor.x, anchor.y + this.tileH / 2, time * 0.8);
+        drawStructure(ctx, def.visualType, anchor.x, anchor.y + this.tileH / 2, time * 0.8, this.camera.zoom);
       }
     }
 
@@ -120,8 +183,8 @@ export class IsoRenderer {
       const p = this.gridToScreen(t.x, t.y);
       ctx.globalAlpha = Math.max(0.25, t.life);
       ctx.fillStyle = t.color;
-      ctx.font = 'bold 11px Verdana';
-      ctx.fillText(t.text, p.x + 10, p.y - 10 - (1 - t.life) * 25);
+      ctx.font = `bold ${Math.max(10, Math.round(11 * this.camera.zoom))}px Verdana`;
+      ctx.fillText(t.text, p.x + 10 * this.camera.zoom, p.y - 10 * this.camera.zoom - (1 - t.life) * 25 * this.camera.zoom);
       ctx.globalAlpha = 1;
     }
   }
