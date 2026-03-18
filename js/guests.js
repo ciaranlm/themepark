@@ -13,13 +13,13 @@ export class GuestManager {
   }
 
   spawn(game) {
-    const { x, y } = this.map.entrance;
+    const { x, y } = this.map.entranceSpawn;
     const body = palette[Math.floor(Math.random() * palette.length)];
     this.guests.push({
-      id: this.nextId++, x: x + 1, y, drawX: x + 1, drawY: y,
+      id: this.nextId++, x, y, drawX: x, drawY: y,
       happiness: 66 + Math.random() * 28, hunger: 20 + Math.random() * 25, thirst: 20,
       energy: 70 + Math.random() * 20, boredom: 10, timeInPark: 0, stayDuration: 120 + Math.random() * 150,
-      target: null, thought: 'ok', thoughtTimer: 0, moveCooldown: 0, interactCooldown: 0, stuckTime: 0,
+      target: null, thought: 'ok', thoughtTimer: 0, moveCooldown: 0, interactCooldown: 0, stuckTime: 0, mode: 'walking', queuedRideId: null,
       palette: { body, head: '#f2d1b2' },
     });
     this.economy.earn(game.state.snapshot.entryFee);
@@ -36,6 +36,8 @@ export class GuestManager {
       this.spawnTimer = 0;
     }
 
+    this.map.updateStructureConnectivity();
+
     for (const g of this.guests) {
       g.interactCooldown = Math.max(0, g.interactCooldown - dt);
       g.timeInPark += dt;
@@ -45,7 +47,21 @@ export class GuestManager {
       g.boredom = clamp(g.boredom + dt * 0.85, 0, 100);
       if (g.hunger > 70 || g.boredom > 70 || g.thirst > 75 || entryFee > 30) g.happiness = clamp(g.happiness - dt * 1.5, 0, 100);
 
-      if (!g.target || Math.random() < 0.008) g.target = this.chooseTarget(g);
+      if (g.mode === 'riding') {
+        if (!this.map.structures[g.queuedRideId]) {
+          g.mode = 'walking';
+          g.queuedRideId = null;
+        }
+        g.target = null;
+      } else if (g.mode === 'queuing') {
+        const queuedRide = this.map.structures[g.queuedRideId];
+        if (!queuedRide || !queuedRide.queue.includes(g.id)) {
+          g.mode = 'walking';
+          g.queuedRideId = null;
+        }
+      } else if (!g.target || Math.random() < 0.008) {
+        g.target = this.chooseTarget(g);
+      }
       this.moveGuest(g, dt);
       g.drawX += (g.x - g.drawX) * 0.28;
       g.drawY += (g.y - g.drawY) * 0.28;
@@ -65,57 +81,65 @@ export class GuestManager {
   }
 
   moveGuest(g, dt) {
+    if (g.mode === 'queuing' || g.mode === 'riding') return;
     g.moveCooldown -= dt;
     if (g.moveCooldown > 0) return;
     g.moveCooldown = 0.32;
-    const neighbors = this.map.pathNeighbors(g.x, g.y);
+    const neighbors = this.map.pathNeighbors(g.x, g.y).filter((tile) => this.map.isTileReachableFromEntrance(tile.x, tile.y));
     if (!neighbors.length) return;
 
-    const next = neighbors.map((n) => ({ tile: n, score: g.target ? Math.abs(n.x - g.target.x) + Math.abs(n.y - g.target.y) + Math.random() * 2.1 : Math.random() * 4 }))
-      .sort((a, b) => a.score - b.score)[0].tile;
+    let next = null;
+    if (g.target?.accessPoint) next = this.map.findNextStepTowards(g.x, g.y, g.target.accessPoint.x, g.target.accessPoint.y);
+    if (!next) next = neighbors[Math.floor(Math.random() * neighbors.length)];
     g.x = next.x;
     g.y = next.y;
   }
 
   tryInteract(g, game) {
     if (!g.target || g.interactCooldown > 0) return;
-    const d = Math.abs(g.x - g.target.x) + Math.abs(g.y - g.target.y);
+    const structure = g.target?.structure;
+    const accessPoint = g.target?.accessPoint;
+    if (!structure || !accessPoint) {
+      g.target = null;
+      return;
+    }
+
+    const d = Math.abs(g.x - accessPoint.x) + Math.abs(g.y - accessPoint.y);
     if (d > 2) return;
 
-    const b = BUILDING_DEFINITIONS[g.target.id];
+    const b = BUILDING_DEFINITIONS[structure.id];
     if (!b) return;
 
-    if ((g.target.serviceTimer ?? 0) > 0) return;
+    if ((structure.serviceTimer ?? 0) > 0) return;
 
     if (b.kind === 'ride') {
-      game.economy.earn(g.target.ticketPrice);
-      g.boredom = clamp(g.boredom - (16 + b.excitement * 0.35), 0, 100);
-      g.energy = clamp(g.energy - 6, 0, 100);
-      g.happiness = clamp(g.happiness + 8, 0, 100);
-      g.target.usageCount += 1;
-      g.target.guestsServed += 1;
-      g.target.serviceTimer = Math.max(2.4, b.capacity * 0.05);
-      g.target.operating = false;
-      g.interactCooldown = 4.8;
-      game.ui.addFloatingText(`+$${g.target.ticketPrice}`, g.x, g.y, '#d7f3d3');
+      if (!structure.connected) {
+        g.target = null;
+        return;
+      }
+      if (!structure.queue.includes(g.id) && !structure.riders.includes(g.id)) structure.queue.push(g.id);
+      g.mode = 'queuing';
+      g.queuedRideId = structure.uid;
+      g.interactCooldown = 2;
     } else if (b.kind === 'food' || b.kind === 'drink') {
-      game.economy.earn(g.target.ticketPrice);
+      game.economy.earn(structure.ticketPrice);
       if (b.effects?.hunger) g.hunger = clamp(g.hunger + b.effects.hunger, 0, 100);
       if (b.effects?.thirst) g.thirst = clamp(g.thirst + b.effects.thirst, 0, 100);
       g.happiness = clamp(g.happiness + 5, 0, 100);
-      g.target.guestsServed += 1;
-      g.target.serviceTimer = 1.2;
-      g.target.operating = false;
+      structure.guestsServed += 1;
+      structure.serviceTimer = 1.2;
+      structure.operating = false;
       g.interactCooldown = 6;
-      game.ui.addFloatingText(`+$${g.target.ticketPrice}`, g.x, g.y, '#ffe7c4');
+      game.ui.addFloatingText(`+$${structure.ticketPrice}`, g.x, g.y, '#ffe7c4');
+      g.target = null;
     } else if (b.kind === 'restroom') {
       g.happiness = clamp(g.happiness + 3, 0, 100);
       g.energy = clamp(g.energy + 6, 0, 100);
-      g.target.serviceTimer = 0.8;
-      g.target.operating = false;
+      structure.serviceTimer = 0.8;
+      structure.operating = false;
       g.interactCooldown = 5;
+      g.target = null;
     }
-    g.target = null;
   }
 
   updateThought(g, dt) {
@@ -128,5 +152,5 @@ export class GuestManager {
 
   averageHappiness() { return this.guests.length ? this.guests.reduce((a, g) => a + g.happiness, 0) / this.guests.length : 70; }
   serialize() { return { guests: this.guests, spawnTimer: this.spawnTimer, nextId: this.nextId }; }
-  restore(data) { this.guests = data.guests.map((g) => ({ ...g, drawX: g.drawX ?? g.x, drawY: g.drawY ?? g.y, interactCooldown: g.interactCooldown ?? 0 })); this.spawnTimer = data.spawnTimer; this.nextId = data.nextId; }
+  restore(data) { this.guests = data.guests.map((g) => ({ ...g, drawX: g.drawX ?? g.x, drawY: g.drawY ?? g.y, interactCooldown: g.interactCooldown ?? 0, mode: g.mode ?? 'walking', queuedRideId: g.queuedRideId ?? null })); this.spawnTimer = data.spawnTimer; this.nextId = data.nextId; }
 }

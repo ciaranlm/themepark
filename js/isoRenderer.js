@@ -155,7 +155,12 @@ export class IsoRenderer {
         const tile = this.map.grid[y][x];
         const p = this.gridToScreen(x, y);
         this.drawBaseTile(ctx, p.x, p.y, tile, time);
-        if (tile.base === 'entrance') drawDiamond(ctx, p.x, p.y + this.camera.zoom, this.tileW - 6 * this.camera.zoom, this.tileH - 4 * this.camera.zoom, '#496b95');
+        if (tile.base === 'entrance') {
+          drawDiamond(ctx, p.x, p.y + this.camera.zoom, this.tileW - 6 * this.camera.zoom, this.tileH - 4 * this.camera.zoom, '#496b95');
+          ctx.fillStyle = '#dbe9f6';
+          ctx.font = `bold ${Math.max(8, Math.round(9 * this.camera.zoom))}px Verdana`;
+          ctx.fillText('IN', p.x - 7 * this.camera.zoom, p.y + 5 * this.camera.zoom);
+        }
       }
     }
 
@@ -174,6 +179,13 @@ export class IsoRenderer {
         const anchor = this.gridToScreen(s.x + s.width / 2 - 0.5, s.y + s.height / 2 - 0.5);
         const def = BUILDING_DEFINITIONS[s.id];
         drawStructure(ctx, def.visualType, anchor.x, anchor.y + this.tileH / 2, time * 0.8, this.camera.zoom);
+        if (s.connected === false) {
+          ctx.fillStyle = 'rgba(136, 21, 21, 0.88)';
+          ctx.fillRect(anchor.x - 16 * this.camera.zoom, anchor.y - 28 * this.camera.zoom, 32 * this.camera.zoom, 12 * this.camera.zoom);
+          ctx.fillStyle = '#fff0f0';
+          ctx.font = `bold ${Math.max(7, Math.round(8 * this.camera.zoom))}px Verdana`;
+          ctx.fillText('NO PATH', anchor.x - 14 * this.camera.zoom, anchor.y - 19 * this.camera.zoom);
+        }
       }
     }
 
