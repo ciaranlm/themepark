@@ -38,6 +38,7 @@ export class RideSystem {
         guest.queuedRideId = structure.uid;
         guest.x = structure.accessPoint?.x ?? guest.x;
         guest.y = structure.accessPoint?.y ?? guest.y;
+        guest.money = Math.max(0, guest.money - structure.ticketPrice);
         context.economy.earn(structure.ticketPrice);
         context.ui.addFloatingText(`+$${structure.ticketPrice}`, guest.x, guest.y, '#d7f3d3');
         structure.riders.push(guest.id);
@@ -70,9 +71,12 @@ export class RideSystem {
         guest.queuedRideId = null;
         guest.target = null;
         guest.interactCooldown = 4.8;
-        guest.boredom = clamp(guest.boredom - (16 + structure.excitement * 0.35), 0, 100);
-        guest.energy = clamp(guest.energy - 6, 0, 100);
-        guest.happiness = clamp(guest.happiness + 8, 0, 100);
+        guest.hunger = clamp(guest.hunger + structure.intensity * 0.08, 0, 100);
+        guest.thirst = clamp(guest.thirst + structure.intensity * 0.12, 0, 100);
+        guest.nausea = clamp(guest.nausea + structure.nausea * 0.85, 0, 100);
+        guest.patience = clamp(guest.patience + 6, 0, 100);
+        guest.happiness = clamp(guest.happiness + 5 + structure.excitement * 0.08 - structure.nausea * 0.03, 0, 100);
+        guest.visitHistory[structure.uid] = (guest.visitHistory[structure.uid] || 0) + 1;
         if (structure.accessPoint) {
           guest.x = structure.accessPoint.x;
           guest.y = structure.accessPoint.y;
