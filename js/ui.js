@@ -4,7 +4,7 @@
  * Owns DOM reads/writes and mirrors data from the shared state store so future
  * changes can extend panels and controls without coupling to simulation code.
  */
-import { BUILDING_DEFINITIONS, CATEGORY_ORDER } from './rideDefinitions.js';
+import { BUILDING_DEFINITIONS, CATEGORY_ORDER, RIDE_CATALOGUE } from './rideDefinitions.js';
 
 export class UI {
   constructor(game) {
@@ -88,8 +88,10 @@ export class UI {
   renderBuildPanel() {
     this.buildButtons.innerHTML = '';
     const selected = BUILDING_DEFINITIONS[this.game.state.snapshot.selectedBuild];
-    const state = this.game.objectives.stateFor(selected);
-    this.buildPreview.innerHTML = `<div class="info-card"><strong>${selected.name}</strong><p>Size ${selected.width}x${selected.height} • Cost $${selected.cost} • Upkeep $${selected.upkeep}</p><p>Status: ${state}</p><p>${state === 'locked' ? this.game.objectives.lockReason(selected) : 'Ready to build'}</p></div>`;
+    const selectedState = this.game.objectives.stateFor(selected);
+    const selectedShortfall = Math.max(0, Math.ceil(selected.cost - this.game.economy.money));
+    const affordText = this.game.economy.canAfford(selected.cost) ? 'Ready to build now.' : `Need $${selectedShortfall} more to build immediately.`;
+    this.buildPreview.innerHTML = `<div class="info-card"><strong>${selected.name}</strong><p>Category: ${selected.category} • Size ${selected.width}x${selected.height}</p><p>Build $${selected.cost} • Ticket $${selected.ticketPrice} • Upkeep $${selected.upkeep}</p><p>Exc ${selected.excitement} • Int ${selected.intensity} • Nau ${selected.nausea}</p><p>Capacity ${selected.capacity} • Cycle ${selected.cycleTime}s</p><p>Status: ${selectedState}${selectedState === 'locked' ? ` • ${this.game.objectives.lockReason(selected)}` : ''}</p><p>${selectedState === 'locked' ? this.game.objectives.lockReason(selected) : affordText}</p></div>`;
 
     for (const category of CATEGORY_ORDER) {
       const wrap = document.createElement('div');
@@ -98,14 +100,19 @@ export class UI {
       const grid = document.createElement('div');
       grid.className = 'build-grid';
 
-      Object.values(BUILDING_DEFINITIONS).filter((d) => d.category === category).forEach((b) => {
+      RIDE_CATALOGUE.filter((d) => d.category === category).forEach((b) => {
         const status = this.game.objectives.stateFor(b);
         const unlocked = status !== 'locked';
+        const canAfford = this.game.economy.canAfford(b.cost);
+        const explanation = !unlocked
+          ? this.game.objectives.lockReason(b)
+          : canAfford
+            ? 'Ready to build now'
+            : `Need $${Math.ceil(b.cost - this.game.economy.money)} more`;
         const btn = document.createElement('button');
-        btn.className = `build-btn ${this.game.state.snapshot.selectedBuild === b.id ? 'active' : ''} ${status}`;
-        btn.disabled = !unlocked;
-        btn.title = `${b.name} (${b.width}x${b.height})\nCost $${b.cost} • Upkeep $${b.upkeep}\n${unlocked ? 'Available' : this.game.objectives.lockReason(b)}`;
-        btn.innerHTML = `<strong>${b.name}</strong><small>$${b.cost} • ${b.width}x${b.height}</small><em>${status === 'locked' ? this.game.objectives.lockReason(b) : status === 'new' ? 'Newly unlocked!' : 'Available'}</em>`;
+        btn.className = `build-btn ${this.game.state.snapshot.selectedBuild === b.id ? 'active' : ''} ${status} ${canAfford ? 'affordable' : 'unaffordable'}`;
+        btn.title = `${b.name} (${b.width}x${b.height})\nBuild $${b.cost} • Ticket $${b.ticketPrice} • Cycle ${b.cycleTime}s\n${explanation}`;
+        btn.innerHTML = `<strong>${b.name}</strong><small>${b.category} • $${b.cost} • ${b.width}x${b.height}</small><em>${status === 'locked' ? explanation : status === 'new' ? 'Newly unlocked!' : explanation}</em>`;
         btn.onclick = () => {
           this.game.state.patch({ selectedBuild: b.id });
           this.game.inputSystem?.refreshPlacementPreview();
@@ -151,19 +158,20 @@ export class UI {
   }
 
   updateInfoPanel(hoverTile) {
-    const { guestManager } = this.game;
+    const { guestManager, definitions } = this.game;
     const { parkRating, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue, placementPreview } = this.game.state.snapshot;
     const avgH = guestManager.averageHappiness();
     const build = BUILDING_DEFINITIONS[selectedBuild];
     const hover = hoverTile ? this.game.map.getTile(hoverTile.x, hoverTile.y) : null;
 
     if (selectedStructure) {
+      const structureDef = definitions[selectedStructure.id];
       const status = !selectedStructure.operating ? 'paused' : selectedStructure.usageCount < 2 ? 'idle' : selectedStructure.usageCount > 25 ? 'busy' : 'operating';
       this.infoContent.innerHTML = `
       <div class="info-card"><strong>${selectedStructure.name}</strong>
       <p>Footprint: ${selectedStructure.width}x${selectedStructure.height}</p>
-      <p>Cost: $${build?.cost ?? 0} • Upkeep: $${selectedStructure.upkeep}</p>
-      <p>Appeal: ${selectedStructure.excitement} • Capacity: ${selectedStructure.capacity}</p>
+      <p>Build: $${structureDef?.cost ?? 0} • Ticket: $${selectedStructure.ticketPrice} • Upkeep: $${selectedStructure.upkeep}</p>
+      <p>Exc: ${selectedStructure.excitement} • Int: ${selectedStructure.intensity} • Nau: ${selectedStructure.nausea}</p><p>Capacity: ${selectedStructure.capacity} • Cycle: ${selectedStructure.cycleTime}s</p>
       <p>Status: ${status} • Guests served: ${selectedStructure.guestsServed}</p></div>`;
       return;
     }
@@ -174,9 +182,10 @@ export class UI {
       <p>Rating: ${Math.round(parkRating)} • Entry Fee: $${entryFee}</p>
       <p>Lifetime guests ${lifetimeGuests} • Revenue $${Math.round(lifetimeRevenue)}</p></div>
       <div class="info-card"><strong>Selected Build</strong>
-      <p>${build.name} (${build.width}x${build.height})</p>
-      <p>Cost $${build.cost} • Upkeep $${build.upkeep}</p>
-      <p>Status: ${this.game.objectives.stateFor(build)} ${this.game.objectives.stateFor(build) === 'locked' ? `• ${this.game.objectives.lockReason(build)}` : ''}</p></div>
+      <p>${build.name} (${build.width}x${build.height}) • ${build.category}</p>
+      <p>Build $${build.cost} • Ticket $${build.ticketPrice} • Upkeep $${build.upkeep}</p>
+      <p>Exc ${build.excitement} • Int ${build.intensity} • Nau ${build.nausea} • Cap ${build.capacity}</p>
+      <p>Status: ${this.game.objectives.stateFor(build)} ${this.game.objectives.stateFor(build) === 'locked' ? `• ${this.game.objectives.lockReason(build)}` : this.game.economy.canAfford(build.cost) ? '• Ready to build now' : `• Need $${Math.ceil(build.cost - this.game.economy.money)} more`}</p></div>
       <div class="info-card"><strong>Hover Tile</strong>
       <p>${hoverTile ? `Tile ${hoverTile.x},${hoverTile.y} • Terrain ${hover?.base || 'grass'}` : 'Move cursor over map.'}</p>
       <p>${placementPreview ? `Placement: ${placementPreview.valid ? 'Valid' : placementPreview.reason}` : 'Placement preview inactive.'}</p></div>`;
