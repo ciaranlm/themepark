@@ -21,6 +21,7 @@ export class UI {
     this.buildButtons = document.getElementById('buildButtons');
     this.buildPreview = document.getElementById('buildPreview');
     this.infoContent = document.getElementById('infoContent');
+    this.thoughtsContent = document.getElementById('thoughtsContent');
     this.statusBar = document.getElementById('statusBar');
     this.notifications = document.getElementById('notifications');
     this.pauseBtn = document.getElementById('pauseBtn');
@@ -155,6 +156,19 @@ export class UI {
     });
 
     for (const [speed, btn] of [[0, this.pauseBtn], [1, this.speed1Btn], [2, this.speed2Btn], [3, this.speed3Btn]]) btn.classList.toggle('active-speed', timeControls.gameSpeed === speed);
+    this.renderThoughts();
+  }
+
+  renderThoughts() {
+    const thoughts = this.game.state.snapshot.recentThoughts || [];
+    if (!thoughts.length) {
+      this.thoughtsContent.innerHTML = '<div class="info-card"><p>No guest feedback yet. Build paths and attractions to hear from your visitors.</p></div>';
+      return;
+    }
+
+    this.thoughtsContent.innerHTML = thoughts
+      .map((entry) => `<div class="thought-card ${entry.mood || 'neutral'}"><strong>Guest #${entry.guestId}</strong><p>${entry.text}</p><small>Day ${entry.atDay}</small></div>`)
+      .join('');
   }
 
   updateInfoPanel(hoverTile) {
@@ -170,13 +184,16 @@ export class UI {
       const queueCount = selectedStructure.queue?.length ?? 0;
       const riders = selectedStructure.riders?.length ?? 0;
       const status = selectedStructure.operatingState || (!selectedStructure.operating ? 'closed' : selectedStructure.usageCount < 2 ? 'idle' : selectedStructure.usageCount > 25 ? 'busy' : 'operating');
+      const estimatedLoads = Math.ceil(queueCount / Math.max(1, selectedStructure.capacity || 1));
+      const estimatedWait = queueCount > 0 ? estimatedLoads * Math.max(1, selectedStructure.cycleTime || 1) : 0;
       this.infoContent.innerHTML = `
       <div class="info-card"><strong>${selectedStructure.name}</strong>
       <p>Footprint: ${selectedStructure.width}x${selectedStructure.height}</p>
       <p>Build: $${structureDef?.cost ?? 0} • Ticket: $${selectedStructure.ticketPrice} • Upkeep: $${selectedStructure.upkeep}</p>
       <p>Exc: ${selectedStructure.excitement} • Int: ${selectedStructure.intensity} • Nau: ${selectedStructure.nausea}</p><p>Capacity: ${selectedStructure.capacity} • Cycle: ${selectedStructure.cycleTime}s</p>
       <p>Status: ${status} • Guests served: ${selectedStructure.guestsServed}</p>
-      <p>Queue: ${queueCount} • Riders: ${riders}</p>
+      <p>Queue length: ${queueCount} • Riders onboard: ${riders}</p>
+      <p>${queueCount > 0 ? `Estimated wait: ~${estimatedWait}s across ${estimatedLoads} load${estimatedLoads === 1 ? '' : 's'}` : 'No queue right now.'}</p>
       <p class="${selectedStructure.connected === false ? 'warning-text' : 'ok-text'}">${connectionText}</p></div>`;
       return;
     }

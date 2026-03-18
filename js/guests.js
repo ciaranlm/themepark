@@ -6,6 +6,7 @@ const palette = ['#eb6f5d', '#5c7fdb', '#d4a14a', '#78b36a', '#9f79d1', '#55a2a1
 const needPressure = (value, start = 55) => clamp((value - start) / (100 - start), 0, 1);
 const comfortPressure = (value, end = 45) => clamp((end - value) / end, 0, 1);
 const patiencePenalty = (queueLength, patience) => Math.max(0, queueLength - Math.max(1, patience / 18));
+const queueIsTooLong = (queueLength, patience) => queueLength >= Math.max(6, Math.round(patience / 5) + 4);
 
 export class GuestManager {
   constructor(gameMap, economy) {
@@ -34,8 +35,10 @@ export class GuestManager {
       timeInPark: 0,
       stayDuration: 120 + Math.random() * 150,
       target: null,
-      thought: 'ok',
+      thought: 'Thinking...',
+      thoughtKey: 'arriving',
       thoughtTimer: 0,
+      thoughtCooldown: 0,
       moveCooldown: 0,
       interactCooldown: 0,
       mode: 'walking',
@@ -89,6 +92,7 @@ export class GuestManager {
           g.queuedRideId = null;
           g.target = null;
           g.happiness = clamp(g.happiness - 4, 0, 100);
+          g.queueComplaintRideId = queuedRide.uid;
         }
       } else if (!g.target || this.shouldRetarget(g)) {
         g.target = this.chooseTarget(g);
@@ -98,7 +102,7 @@ export class GuestManager {
       g.drawX += (g.x - g.drawX) * 0.28;
       g.drawY += (g.y - g.drawY) * 0.28;
       this.tryInteract(g, game);
-      this.updateThought(g, dt);
+      this.updateThought(g, dt, game);
       this.updateLeaveIntent(g);
     }
 
@@ -147,6 +151,7 @@ export class GuestManager {
     if (!route) return null;
 
     const queueLength = structure.queue.length + structure.riders.length;
+    if (definition.kind === 'ride' && queueIsTooLong(queueLength, guest.patience)) return null;
     const queuePenalty = queueLength * (definition.kind === 'ride' ? 1.25 : 0.6) + patiencePenalty(queueLength, guest.patience) * 4;
     const distancePenalty = route.distance * 1.4;
     const affordabilityPenalty = structure.ticketPrice > guest.money ? 1000 : 0;
@@ -222,8 +227,21 @@ export class GuestManager {
     if ((structure.serviceTimer ?? 0) > 0) return;
 
     if (b.kind === 'ride') {
-      if (!structure.connected || structure.ticketPrice > g.money) {
+      const queueLength = (structure.queue?.length ?? 0) + (structure.riders?.length ?? 0);
+      if (!structure.connected) {
         g.target = null;
+        return;
+      }
+      if (structure.ticketPrice > g.money) {
+        g.target = null;
+        g.priceComplaintRideId = structure.uid;
+        g.happiness = clamp(g.happiness - 2, 0, 100);
+        return;
+      }
+      if (queueIsTooLong(queueLength, g.patience)) {
+        g.target = null;
+        g.queueComplaintRideId = structure.uid;
+        g.happiness = clamp(g.happiness - 1.5, 0, 100);
         return;
       }
       if (!structure.queue.includes(g.id) && !structure.riders.includes(g.id)) structure.queue.push(g.id);
@@ -270,16 +288,49 @@ export class GuestManager {
     }
   }
 
-  updateThought(g, dt) {
+  updateThought(g, dt, game) {
     g.thoughtTimer = Math.max(0, g.thoughtTimer - dt);
+    g.thoughtCooldown = Math.max(0, (g.thoughtCooldown ?? 0) - dt);
     if (g.thoughtTimer > 0) return;
 
-    if (g.leaveIntent >= 1) g.thought = 'leave';
-    else if (g.thirst > 70) g.thought = 'drink';
-    else if (g.hunger > 70) g.thought = 'food';
-    else if (g.nausea > 55) g.thought = 'rest';
-    else g.thought = g.happiness < 45 ? 'cheer up' : 'ride';
+    const nextThought = this.evaluateThought(g, game);
+    const changed = nextThought.key !== g.thoughtKey || nextThought.text !== g.thought;
+    g.thoughtKey = nextThought.key;
+    g.thought = nextThought.text;
+
+    if (changed && g.thoughtCooldown <= 0) {
+      game.state.addThought({
+        guestId: g.id,
+        text: nextThought.text,
+        mood: nextThought.mood,
+        atDay: game.timeControls.day,
+      });
+      g.thoughtCooldown = 4;
+    }
+
     g.thoughtTimer = 1;
+  }
+
+  evaluateThought(g, game) {
+    const queuedRide = g.queuedRideId ? this.map.structures[g.queuedRideId] : null;
+    const complainedRide = g.queueComplaintRideId ? this.map.structures[g.queueComplaintRideId] : null;
+    const expensiveRide = g.priceComplaintRideId ? this.map.structures[g.priceComplaintRideId] : null;
+
+    if (g.hunger >= 72) return { key: 'hungry', text: "I'm hungry", mood: 'need' };
+    if (expensiveRide && expensiveRide.ticketPrice > g.money) return { key: `expensive-${expensiveRide.uid}`, text: 'This ride is too expensive', mood: 'warning' };
+    if (queuedRide && queueIsTooLong((queuedRide.queue?.length ?? 0) + (queuedRide.riders?.length ?? 0), g.patience)) {
+      return { key: `queue-${queuedRide.uid}`, text: 'Queue is too long', mood: 'warning' };
+    }
+    if (complainedRide && queueIsTooLong((complainedRide.queue?.length ?? 0) + (complainedRide.riders?.length ?? 0), g.patience)) {
+      return { key: `queue-${complainedRide.uid}`, text: 'Queue is too long', mood: 'warning' };
+    }
+    if (game.state.snapshot.parkRating >= 82 && g.happiness >= 78 && g.hunger < 55 && g.thirst < 55 && g.nausea < 35) {
+      return { key: 'park-great', text: 'This park is great', mood: 'positive' };
+    }
+    if (g.thirst >= 70) return { key: 'thirsty', text: "I'm thirsty", mood: 'need' };
+    if (g.nausea >= 58) return { key: 'rest', text: 'I need a break', mood: 'need' };
+    if (g.leaveIntent >= 1) return { key: 'leave', text: 'Time to head home', mood: 'neutral' };
+    return { key: 'explore', text: 'Looking for my next ride', mood: 'neutral' };
   }
 
   averageHappiness() { return this.guests.length ? this.guests.reduce((a, g) => a + g.happiness, 0) / this.guests.length : 70; }
@@ -297,6 +348,11 @@ export class GuestManager {
       patience: g.patience ?? 70,
       leaveIntent: g.leaveIntent ?? 0,
       visitHistory: g.visitHistory ?? {},
+      thought: g.thought ?? 'Thinking...',
+      thoughtKey: g.thoughtKey ?? 'restored',
+      thoughtCooldown: g.thoughtCooldown ?? 0,
+      queueComplaintRideId: g.queueComplaintRideId ?? null,
+      priceComplaintRideId: g.priceComplaintRideId ?? null,
     }));
     this.spawnTimer = data.spawnTimer;
     this.nextId = data.nextId;

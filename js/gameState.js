@@ -20,6 +20,7 @@ export class GameStateStore {
       lifetimeRevenue: 0,
       currentDay: 1,
       floatingTexts: [],
+      recentThoughts: [],
       lastFrameAt: performance.now(),
     };
   }
@@ -43,6 +44,10 @@ export class GameStateStore {
       .filter((item) => item.life > 0);
   }
 
+  addThought(entry) {
+    this.state.recentThoughts = [entry, ...(this.state.recentThoughts || [])].slice(0, 10);
+  }
+
   serialize() {
     const { lastFrameAt, ...persisted } = this.state;
     return persisted;
@@ -57,6 +62,7 @@ export class GameStateStore {
       hoverTile: data.hoverTile ?? null,
       placementPreview: data.placementPreview ?? null,
       floatingTexts: Array.isArray(data.floatingTexts) ? data.floatingTexts : [],
+      recentThoughts: Array.isArray(data.recentThoughts) ? data.recentThoughts : [],
       lastFrameAt: performance.now(),
     };
   }
