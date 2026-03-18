@@ -30,6 +30,7 @@ export class RideSystem {
     }
 
     if (structure.operatingState === 'loading') {
+      let cycleIncome = 0;
       while (structure.queue.length > 0 && structure.riders.length < structure.capacity) {
         const guestId = structure.queue.shift();
         const guest = context.guestManager.guests.find((candidate) => candidate.id === guestId);
@@ -42,10 +43,14 @@ export class RideSystem {
         guest.x = structure.accessPoint?.x ?? guest.x;
         guest.y = structure.accessPoint?.y ?? guest.y;
         guest.money = Math.max(0, guest.money - structure.ticketPrice);
-        context.economy.earn(structure.ticketPrice);
+        context.economy.recordRevenue(structure.ticketPrice, 'ride-ticket');
+        cycleIncome += structure.ticketPrice;
         context.ui.addFloatingText(`+$${structure.ticketPrice}`, guest.x, guest.y, '#d7f3d3');
         structure.riders.push(guest.id);
       }
+      structure.finances.income += cycleIncome;
+      structure.finances.lastCycleIncome = cycleIncome;
+      structure.finances.profit = structure.finances.income - structure.finances.operatingCost - structure.finances.buildCost;
       structure.stateTimer -= dt;
       if (structure.stateTimer <= 0) {
         structure.operatingState = structure.riders.length > 0 ? 'running' : 'idle';
@@ -86,6 +91,7 @@ export class RideSystem {
         }
       }
       structure.guestsServed += structure.riders.length;
+      structure.finances.ridersServed += structure.riders.length;
       structure.usageCount += structure.riders.length;
       structure.lastQueueLength = structure.queue.length;
       structure.riders = [];
@@ -93,6 +99,7 @@ export class RideSystem {
       structure.stateTimer = structure.operatingState === 'loading'
         ? Math.max(1.2, Math.min(3.2, 0.45 + structure.capacity * 0.04))
         : 0;
+      structure.finances.profit = structure.finances.income - structure.finances.operatingCost - structure.finances.buildCost;
     }
   }
 
@@ -110,6 +117,7 @@ export class RideSystem {
         structure.operatingState = structure.connected === false ? 'closed' : (structure.serviceTimer > 0 ? 'busy' : 'idle');
         structure.operating = structure.serviceTimer <= 0 && structure.connected !== false;
       }
+      structure.finances.profit = structure.finances.income - structure.finances.operatingCost - structure.finances.buildCost;
     }
     return this.simulation.computeParkRating();
   }

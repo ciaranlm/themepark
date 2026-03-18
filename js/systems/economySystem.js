@@ -11,8 +11,18 @@ export class EconomySystem {
     this.ui = ui;
   }
 
-  update(dt, totalUpkeep, map) {
-    const upkeep = this.economy.tick(dt, totalUpkeep);
-    if (upkeep > 0) this.ui.addFloatingText(`-$${Math.round(upkeep)} upkeep`, map.entrance.x + 2, map.entrance.y - 2, '#ffe0cf');
+  update(dt, operatingCostBreakdown, map) {
+    const { upkeepPaid, breakdown } = this.economy.tick(dt, operatingCostBreakdown);
+    if (upkeepPaid > 0) {
+      for (const item of breakdown) {
+        if (!item.uid) continue;
+        const structure = map.structures[item.uid];
+        if (!structure?.finances) continue;
+        structure.finances.operatingCost += item.cost;
+        structure.finances.lastOperatingCost = item.cost;
+        structure.finances.profit = structure.finances.income - structure.finances.operatingCost - structure.finances.buildCost;
+      }
+      this.ui.addFloatingText(`-$${Math.round(upkeepPaid)} running costs`, map.entrance.x + 2, map.entrance.y - 2, '#ffe0cf');
+    }
   }
 }
