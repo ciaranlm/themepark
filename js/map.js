@@ -21,6 +21,7 @@ export class GameMap {
     this.nextStructureId = 1;
     this.pathDataDirty = true;
     this.cachedReachablePaths = new Set();
+    this.routeCache = new Map();
 
     this.getTile(this.entrance.x, this.entrance.y).base = 'entrance';
     this.getTile(this.entranceSpawn.x, this.entranceSpawn.y).base = 'path';
@@ -30,7 +31,10 @@ export class GameMap {
   getTile(x, y) { return this.inBounds(x, y) ? this.grid[y][x] : null; }
   tileKey(x, y) { return `${x},${y}`; }
   isPathTile(tile) { return Boolean(tile && (tile.base === 'path' || tile.base === 'entrance')); }
-  markPathDataDirty() { this.pathDataDirty = true; }
+  markPathDataDirty() {
+    this.pathDataDirty = true;
+    this.routeCache.clear();
+  }
 
   hasAdjacentPath(x, y) {
     return CARDINALS.some(([dx, dy]) => this.isPathTile(this.getTile(x + dx, y + dy)));
@@ -108,8 +112,8 @@ export class GameMap {
     const reachable = new Set();
     const start = this.getTile(this.entrance.x, this.entrance.y);
     const queue = start ? [start] : [];
-    while (queue.length) {
-      const tile = queue.shift();
+    for (let i = 0; i < queue.length; i++) {
+      const tile = queue[i];
       const key = this.tileKey(tile.x, tile.y);
       if (reachable.has(key) || !this.isPathTile(tile)) continue;
       reachable.add(key);
@@ -159,41 +163,59 @@ export class GameMap {
     }
   }
 
-  findNextStepTowards(startX, startY, goalX, goalY) {
-    if (startX === goalX && startY === goalY) return { x: startX, y: startY };
-    const startKey = this.tileKey(startX, startY);
+  buildRouteMap(goalX, goalY) {
     const goalKey = this.tileKey(goalX, goalY);
-    const queue = [{ x: startX, y: startY }];
-    const cameFrom = new Map([[startKey, null]]);
-    while (queue.length) {
-      const current = queue.shift();
+    if (this.routeCache.has(goalKey)) return this.routeCache.get(goalKey);
+    if (!this.isTileReachableFromEntrance(goalX, goalY)) return null;
+
+    const distances = new Map([[goalKey, 0]]);
+    const queue = [{ x: goalX, y: goalY }];
+    for (let i = 0; i < queue.length; i++) {
+      const current = queue[i];
+      const currentDistance = distances.get(this.tileKey(current.x, current.y));
       for (const next of this.pathNeighbors(current.x, current.y)) {
         const key = this.tileKey(next.x, next.y);
-        if (cameFrom.has(key) || !this.isTileReachableFromEntrance(next.x, next.y)) continue;
-        cameFrom.set(key, current);
-        if (key === goalKey) {
-          let step = next;
-          let previous = current;
-          while (previous && this.tileKey(previous.x, previous.y) !== startKey) {
-            step = previous;
-            previous = cameFrom.get(this.tileKey(previous.x, previous.y));
-          }
-          return step;
-        }
+        if (distances.has(key) || !this.isTileReachableFromEntrance(next.x, next.y)) continue;
+        distances.set(key, currentDistance + 1);
         queue.push({ x: next.x, y: next.y });
       }
     }
-    return null;
+
+    const routeMap = { goalKey, distances };
+    this.routeCache.set(goalKey, routeMap);
+    return routeMap;
+  }
+
+  findRouteInfo(startX, startY, goalX, goalY) {
+    const routeMap = this.buildRouteMap(goalX, goalY);
+    if (!routeMap) return null;
+    const startKey = this.tileKey(startX, startY);
+    if (!routeMap.distances.has(startKey)) return null;
+
+    const distance = routeMap.distances.get(startKey);
+    let bestStep = null;
+    let bestDistance = distance;
+    for (const next of this.pathNeighbors(startX, startY)) {
+      const nextDistance = routeMap.distances.get(this.tileKey(next.x, next.y));
+      if (nextDistance === undefined || nextDistance >= bestDistance) continue;
+      bestDistance = nextDistance;
+      bestStep = { x: next.x, y: next.y };
+    }
+
+    return { distance, nextStep: bestStep ?? { x: startX, y: startY } };
+  }
+
+  findNextStepTowards(startX, startY, goalX, goalY) {
+    return this.findRouteInfo(startX, startY, goalX, goalY)?.nextStep || null;
   }
 
   nearbyAttractions(x, y, range = 8) {
     const out = [];
     for (const s of Object.values(this.structures)) {
       if (!s.connected) continue;
-      const cx = s.x + (s.width - 1) / 2;
-      const cy = s.y + (s.height - 1) / 2;
-      const dist = Math.abs(cx - x) + Math.abs(cy - y);
-      if (dist <= range) out.push({ structure: s, dist, accessPoint: s.accessPoint });
+      const route = s.accessPoint ? this.findRouteInfo(x, y, s.accessPoint.x, s.accessPoint.y) : null;
+      if (!route || route.distance > range) continue;
+      out.push({ structure: s, dist: route.distance, accessPoint: s.accessPoint, nextStep: route.nextStep });
     }
     return out.sort((a, b) => a.dist - b.dist);
   }
