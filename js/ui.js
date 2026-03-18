@@ -13,6 +13,8 @@ export class UI {
     this.guestStat = document.getElementById('guestStat');
     this.ratingStat = document.getElementById('ratingStat');
     this.profitStat = document.getElementById('profitStat');
+    this.incomeStat = document.getElementById('incomeStat');
+    this.costStat = document.getElementById('costStat');
     this.objectiveStat = document.getElementById('objectiveStat');
     this.timeState = document.getElementById('timeState');
     this.dayStat = document.getElementById('dayStat');
@@ -29,6 +31,14 @@ export class UI {
     this.speed2Btn = document.getElementById('speed2Btn');
     this.speed3Btn = document.getElementById('speed3Btn');
     this.setupManagementModal();
+  }
+
+  currency(value) {
+    return `$${Math.round(value)}`;
+  }
+
+  profitClass(value) {
+    return value >= 0 ? 'finance-positive' : 'finance-negative';
   }
 
   setupTimeControls() {
@@ -81,7 +91,8 @@ export class UI {
     this.feeReaction.textContent = reaction;
     this.managementStats.innerHTML = `
       <div><strong>Lifetime Guests:</strong> ${lifetimeGuests}</div>
-      <div><strong>Lifetime Revenue:</strong> $${Math.round(lifetimeRevenue)}</div>
+      <div><strong>Lifetime Revenue:</strong> ${this.currency(lifetimeRevenue)}</div>
+      <div><strong>Lifetime Expenses:</strong> ${this.currency(this.game.economy.lifetimeExpenses)}</div>
       <div><strong>Days Open:</strong> ${currentDay}</div>
       <div><strong>Tier:</strong> ${parkRating > 82 ? 'Premier Park' : parkRating > 65 ? 'Regional Park' : 'Starter Park'}</div>`;
   }
@@ -139,11 +150,13 @@ export class UI {
   updateStats() {
     const { economy, guestManager, timeControls } = this.game;
     const state = this.game.state.snapshot;
-    this.moneyStat.textContent = `$${Math.floor(economy.money)}`;
+    this.moneyStat.textContent = this.currency(Math.floor(economy.money));
     this.guestStat.textContent = `${guestManager.guests.length}`;
     this.ratingStat.textContent = `${Math.round(state.parkRating)}`;
-    this.profitStat.textContent = `$${Math.round(economy.dailyProfit)}/day`;
-    this.entryFeeStat.textContent = `$${state.entryFee}`;
+    this.profitStat.textContent = `${this.currency(economy.dailyProfit)}/day`;
+    this.incomeStat.textContent = `${this.currency(economy.dailyRevenue)}/day`;
+    this.costStat.textContent = `${this.currency(economy.lastOperatingCost)}/tick`;
+    this.entryFeeStat.textContent = this.currency(state.entryFee);
     this.parkNameStat.textContent = state.parkName;
     this.objectiveStat.textContent = 'Grow your park: expand attractions, rating, and guest comfort.';
     this.timeState.textContent = timeControls.label();
@@ -172,7 +185,7 @@ export class UI {
   }
 
   updateInfoPanel(hoverTile) {
-    const { guestManager, definitions } = this.game;
+    const { guestManager, definitions, economy, map } = this.game;
     const { parkRating, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue, placementPreview } = this.game.state.snapshot;
     const avgH = guestManager.averageHappiness();
     const build = BUILDING_DEFINITIONS[selectedBuild];
@@ -186,23 +199,52 @@ export class UI {
       const status = selectedStructure.operatingState || (!selectedStructure.operating ? 'closed' : selectedStructure.usageCount < 2 ? 'idle' : selectedStructure.usageCount > 25 ? 'busy' : 'operating');
       const estimatedLoads = Math.ceil(queueCount / Math.max(1, selectedStructure.capacity || 1));
       const estimatedWait = queueCount > 0 ? estimatedLoads * Math.max(1, selectedStructure.cycleTime || 1) : 0;
+      const finances = selectedStructure.finances || { buildCost: structureDef?.cost ?? 0, income: 0, operatingCost: 0, profit: -(structureDef?.cost ?? 0), ridersServed: selectedStructure.guestsServed ?? 0 };
+      const margin = finances.income > 0 ? `${Math.round((finances.profit / finances.income) * 100)}% margin` : 'No sales yet';
       this.infoContent.innerHTML = `
       <div class="info-card"><strong>${selectedStructure.name}</strong>
       <p>Footprint: ${selectedStructure.width}x${selectedStructure.height}</p>
       <p>Build: $${structureDef?.cost ?? 0} • Ticket: $${selectedStructure.ticketPrice} • Upkeep: $${selectedStructure.upkeep}</p>
+      <p>Running cost now: ${this.currency(selectedStructure.currentOperatingCost || 0)} per tick</p>
       <p>Exc: ${selectedStructure.excitement} • Int: ${selectedStructure.intensity} • Nau: ${selectedStructure.nausea}</p><p>Capacity: ${selectedStructure.capacity} • Cycle: ${selectedStructure.cycleTime}s</p>
       <p>Status: ${status} • Guests served: ${selectedStructure.guestsServed}</p>
       <p>Queue length: ${queueCount} • Riders onboard: ${riders}</p>
       <p>${queueCount > 0 ? `Estimated wait: ~${estimatedWait}s across ${estimatedLoads} load${estimatedLoads === 1 ? '' : 's'}` : 'No queue right now.'}</p>
-      <p class="${selectedStructure.connected === false ? 'warning-text' : 'ok-text'}">${connectionText}</p></div>`;
+      <p class="${selectedStructure.connected === false ? 'warning-text' : 'ok-text'}">${connectionText}</p></div>
+      <div class="info-card"><strong>Ride Finances</strong>
+        <div class="finance-grid">
+          <div class="finance-chip"><span>Build cost</span><strong>${this.currency(finances.buildCost)}</strong></div>
+          <div class="finance-chip"><span>Riders served</span><strong>${finances.ridersServed}</strong></div>
+          <div class="finance-chip"><span>Total income</span><strong>${this.currency(finances.income)}</strong></div>
+          <div class="finance-chip"><span>Total operating cost</span><strong>${this.currency(finances.operatingCost)}</strong></div>
+        </div>
+        <div class="detail-list">
+          <div class="detail-row"><span>Profit</span><strong class="${this.profitClass(finances.profit)}">${this.currency(finances.profit)}</strong></div>
+          <div class="detail-row"><span>Last cycle income</span><strong>${this.currency(finances.lastCycleIncome || 0)}</strong></div>
+          <div class="detail-row"><span>Last running cost tick</span><strong>${this.currency(finances.lastOperatingCost || 0)}</strong></div>
+          <div class="detail-row"><span>Performance</span><strong class="${this.profitClass(finances.profit)}">${margin}</strong></div>
+        </div>
+      </div>`;
       return;
     }
+
+    const profitableRide = Object.values(map.structures)
+      .filter((structure) => structure.finances)
+      .sort((a, b) => (b.finances?.profit || -Infinity) - (a.finances?.profit || -Infinity))[0];
+    const burningRide = Object.values(map.structures)
+      .filter((structure) => structure.finances)
+      .sort((a, b) => (a.finances?.profit || Infinity) - (b.finances?.profit || Infinity))[0];
 
     this.infoContent.innerHTML = `
       <div class="info-card"><strong>Park Overview</strong>
       <p>Guest happiness: ${avgH.toFixed(1)}%</p><div class="progress"><span style="width:${avgH}%"></span></div>
-      <p>Rating: ${Math.round(parkRating)} • Entry Fee: $${entryFee}</p>
-      <p>Lifetime guests ${lifetimeGuests} • Revenue $${Math.round(lifetimeRevenue)}</p></div>
+      <p>Rating: ${Math.round(parkRating)} • Entry Fee: ${this.currency(entryFee)}</p>
+      <p>Lifetime guests ${lifetimeGuests} • Revenue ${this.currency(lifetimeRevenue)}</p>
+      <p>Daily income ${this.currency(economy.dailyRevenue)} • Daily expenses ${this.currency(economy.dailyExpenses)} • Profit ${this.currency(economy.dailyProfit)}</p></div>
+      <div class="info-card"><strong>Income Snapshot</strong>
+      <p>Last operating cost tick: ${this.currency(economy.lastOperatingCost)}</p>
+      <p>Top earner: ${profitableRide ? `${profitableRide.name} (${this.currency(profitableRide.finances.profit)})` : 'Build attractions to start earning.'}</p>
+      <p>Weakest performer: ${burningRide ? `${burningRide.name} (${this.currency(burningRide.finances.profit)})` : 'No ride costs tracked yet.'}</p></div>
       <div class="info-card"><strong>Selected Build</strong>
       <p>${build.name} (${build.width}x${build.height}) • ${build.category}</p>
       <p>Build $${build.cost} • Ticket $${build.ticketPrice} • Upkeep $${build.upkeep}</p>
@@ -213,11 +255,9 @@ export class UI {
       <p>${hoverTile && hover?.base === 'entrance' ? 'Guests spawn here and must use connected paths.' : placementPreview ? `Placement: ${placementPreview.valid ? 'Valid' : placementPreview.reason}` : 'Placement preview inactive.'}</p></div>`;
   }
 
-
   timeLabel() { return this.game.timeControls.label(); }
 
   addFloatingText(text, x, y, color) { this.game.state.addFloatingText(text, x, y, color); }
 
   setHint(text) { this.statusBar.textContent = text; }
 }
-

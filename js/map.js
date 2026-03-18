@@ -65,6 +65,15 @@ export class GameMap {
       riders: [],
       loadTimer: 0,
       unloadTimer: 0,
+      finances: {
+        buildCost: definition.cost,
+        income: 0,
+        operatingCost: 0,
+        profit: -definition.cost,
+        ridersServed: 0,
+        lastCycleIncome: 0,
+        lastOperatingCost: 0,
+      },
     };
     this.structures[structure.uid] = structure;
 
@@ -160,6 +169,15 @@ export class GameMap {
     for (const structure of Object.values(this.structures)) {
       structure.accessPoint = this.getConnectedAccessPoint(structure);
       structure.connected = Boolean(structure.accessPoint);
+      structure.finances = {
+        buildCost: structure.finances?.buildCost ?? 0,
+        income: structure.finances?.income ?? 0,
+        operatingCost: structure.finances?.operatingCost ?? 0,
+        profit: structure.finances?.profit ?? ((structure.finances?.income ?? 0) - (structure.finances?.operatingCost ?? 0) - (structure.finances?.buildCost ?? 0)),
+        ridersServed: structure.finances?.ridersServed ?? structure.guestsServed ?? 0,
+        lastCycleIncome: structure.finances?.lastCycleIncome ?? 0,
+        lastOperatingCost: structure.finances?.lastOperatingCost ?? 0,
+      };
     }
   }
 

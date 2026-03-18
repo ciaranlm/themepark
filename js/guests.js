@@ -26,7 +26,7 @@ export class GuestManager {
       y,
       drawX: x,
       drawY: y,
-      money: 35 + Math.random() * 80,
+      money: 18 + Math.random() * 52,
       happiness: 62 + Math.random() * 28,
       hunger: 12 + Math.random() * 18,
       thirst: 10 + Math.random() * 20,
@@ -47,7 +47,7 @@ export class GuestManager {
       visitHistory: {},
       palette: { body, head: '#f2d1b2' },
     });
-    this.economy.earn(game.state.snapshot.entryFee);
+    this.economy.recordRevenue(game.state.snapshot.entryFee, 'entry-fee');
   }
 
   update(dt, game) {
@@ -154,19 +154,23 @@ export class GuestManager {
     if (definition.kind === 'ride' && queueIsTooLong(queueLength, guest.patience)) return null;
     const queuePenalty = queueLength * (definition.kind === 'ride' ? 1.25 : 0.6) + patiencePenalty(queueLength, guest.patience) * 4;
     const distancePenalty = route.distance * 1.4;
-    const affordabilityPenalty = structure.ticketPrice > guest.money ? 1000 : 0;
+    const priceRatio = structure.ticketPrice / Math.max(guest.money, 1);
+    const affordabilityPenalty = structure.ticketPrice > guest.money ? 1000 : Math.max(0, priceRatio - 0.18) * 48;
     const repeatVisits = guest.visitHistory[structure.uid] || 0;
 
     let score = 0;
     if (definition.kind === 'ride') {
       const thrillNeed = clamp((55 - guest.happiness) / 12, 0, 4) + clamp((guest.money - structure.ticketPrice) / 35, 0, 2);
+      const valuePenalty = Math.max(0, structure.ticketPrice - (definition.excitement * 0.42 + 8)) * 1.35;
       const nauseaPenalty = Math.max(0, guest.nausea + definition.nausea - 75) * 1.6;
       const intensityPenalty = Math.max(0, definition.intensity - (guest.happiness + 15)) * 0.25;
-      score = definition.excitement * 1.25 + thrillNeed * 8 - distancePenalty - queuePenalty - affordabilityPenalty - nauseaPenalty - intensityPenalty - repeatVisits * 7;
+      score = definition.excitement * 1.25 + thrillNeed * 8 - distancePenalty - queuePenalty - affordabilityPenalty - nauseaPenalty - intensityPenalty - valuePenalty - repeatVisits * 7;
     } else if (definition.kind === 'food') {
-      score = needPressure(guest.hunger, 40) * 85 + (guest.money >= structure.ticketPrice ? 8 : -1000) - distancePenalty - queuePenalty - repeatVisits * 4;
+      const foodValuePenalty = Math.max(0, structure.ticketPrice - 9) * 5.5;
+      score = needPressure(guest.hunger, 40) * 85 + (guest.money >= structure.ticketPrice ? 8 : -1000) - distancePenalty - queuePenalty - foodValuePenalty - repeatVisits * 4;
     } else if (definition.kind === 'drink') {
-      score = needPressure(guest.thirst, 38) * 85 + (guest.money >= structure.ticketPrice ? 8 : -1000) - distancePenalty - queuePenalty - repeatVisits * 4;
+      const drinkValuePenalty = Math.max(0, structure.ticketPrice - 7) * 6;
+      score = needPressure(guest.thirst, 38) * 85 + (guest.money >= structure.ticketPrice ? 8 : -1000) - distancePenalty - queuePenalty - drinkValuePenalty - repeatVisits * 4;
     } else if (definition.kind === 'restroom' || definition.kind === 'facility') {
       score = needPressure(guest.nausea, 28) * 70 + comfortPressure(guest.patience, 55) * 22 - distancePenalty - queuePenalty * 0.5;
     } else {
@@ -255,12 +259,15 @@ export class GuestManager {
         return;
       }
       g.money = Math.max(0, g.money - structure.ticketPrice);
-      game.economy.earn(structure.ticketPrice);
+      game.economy.recordRevenue(structure.ticketPrice, `${b.kind}-sale`);
+      structure.finances.income += structure.ticketPrice;
+      structure.finances.profit = structure.finances.income - structure.finances.operatingCost - structure.finances.buildCost;
       if (b.effects?.hunger) g.hunger = clamp(g.hunger + b.effects.hunger, 0, 100);
       if (b.effects?.thirst) g.thirst = clamp(g.thirst + b.effects.thirst, 0, 100);
       g.happiness = clamp(g.happiness + 6, 0, 100);
       g.patience = clamp(g.patience + 4, 0, 100);
       structure.guestsServed += 1;
+      structure.finances.ridersServed += 1;
       structure.serviceTimer = 1.2;
       structure.operating = false;
       g.interactCooldown = 6;

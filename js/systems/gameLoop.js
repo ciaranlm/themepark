@@ -29,12 +29,12 @@ export class GameLoop {
     this.state.patch({ lastFrameAt: now });
 
     const simDt = this.timeControls.tick(dt);
-    let totalUpkeep = 0;
+    let operatingCostBreakdown = [];
 
     if (simDt > 0) {
-      ({ totalUpkeep } = this.rideSystem.update(simDt, this.context));
+      ({ operatingCostBreakdown } = this.rideSystem.update(simDt, this.context));
       this.guestSystem.update(simDt, this.context);
-      this.economySystem.update(simDt, totalUpkeep, this.context.map);
+      this.economySystem.update(simDt, operatingCostBreakdown, this.context.map);
       this.state.tickFloatingTexts(simDt);
     }
 
