@@ -1,20 +1,34 @@
 export class TimeControls {
+  static BASE_TIME_SCALE = 0.4;
+
   constructor() {
-    this.state = 'play';
+    globalThis.gameSpeed = 1;
     this.day = 1;
     this.dayClock = 0;
   }
 
-  get speedMultiplier() {
-    if (this.state === 'pause') return 0;
-    if (this.state === 'fast') return 2.1;
-    return 0.6;
+  get gameSpeed() {
+    return globalThis.gameSpeed ?? 1;
   }
 
-  setState(state) { this.state = state; }
+  set gameSpeed(speed) {
+    globalThis.gameSpeed = speed;
+  }
+
+  get isPaused() {
+    return this.gameSpeed === 0;
+  }
+
+  get speedMultiplier() {
+    return this.gameSpeed;
+  }
+
+  setSpeed(speed) {
+    globalThis.gameSpeed = [0, 1, 2, 3].includes(speed) ? speed : 1;
+  }
 
   tick(realDt) {
-    const simDt = realDt * this.speedMultiplier;
+    const simDt = realDt * TimeControls.BASE_TIME_SCALE * this.gameSpeed;
     this.dayClock += simDt;
     while (this.dayClock >= 75) {
       this.dayClock -= 75;
@@ -24,8 +38,6 @@ export class TimeControls {
   }
 
   label() {
-    if (this.state === 'pause') return 'Paused';
-    if (this.state === 'fast') return 'Fast x3.5';
-    return 'Play x1';
+    return this.isPaused ? 'Paused' : `${this.gameSpeed}x Speed`;
   }
 }

@@ -10,7 +10,12 @@ export class RideSystem {
     this.simulation = simulation;
   }
 
-  update() {
+  update(dt, context) {
+    for (const structure of Object.values(context.map.structures)) {
+      structure.usageCount = Math.max(0, structure.usageCount - dt * 0.35);
+      structure.serviceTimer = Math.max(0, (structure.serviceTimer ?? 0) - dt);
+      structure.operating = structure.serviceTimer <= 0;
+    }
     return this.simulation.computeParkRating();
   }
 }

@@ -42,7 +42,7 @@ export class GameMap {
       uid: this.nextStructureId++, id: definition.id, name: definition.name, x, y,
       width: definition.width, height: definition.height, ticketPrice: definition.ticket,
       upkeep: definition.upkeep, excitement: definition.excitement, capacity: definition.capacity,
-      usageCount: 0, operating: true, guestsServed: 0,
+      usageCount: 0, operating: true, guestsServed: 0, serviceTimer: 0,
     };
     this.structures[structure.uid] = structure;
 

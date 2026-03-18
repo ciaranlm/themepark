@@ -85,6 +85,8 @@ export class GuestManager {
     const b = BUILDING_DEFINITIONS[g.target.id];
     if (!b) return;
 
+    if ((g.target.serviceTimer ?? 0) > 0) return;
+
     if (b.kind === 'ride') {
       game.economy.earn(g.target.ticketPrice);
       g.boredom = clamp(g.boredom - (16 + b.excitement * 0.35), 0, 100);
@@ -92,6 +94,8 @@ export class GuestManager {
       g.happiness = clamp(g.happiness + 8, 0, 100);
       g.target.usageCount += 1;
       g.target.guestsServed += 1;
+      g.target.serviceTimer = Math.max(2.4, b.capacity * 0.05);
+      g.target.operating = false;
       g.interactCooldown = 4.8;
       game.ui.addFloatingText(`+$${g.target.ticketPrice}`, g.x, g.y, '#d7f3d3');
     } else if (b.kind === 'food' || b.kind === 'drink') {
@@ -100,11 +104,15 @@ export class GuestManager {
       if (b.effects?.thirst) g.thirst = clamp(g.thirst + b.effects.thirst, 0, 100);
       g.happiness = clamp(g.happiness + 5, 0, 100);
       g.target.guestsServed += 1;
+      g.target.serviceTimer = 1.2;
+      g.target.operating = false;
       g.interactCooldown = 6;
       game.ui.addFloatingText(`+$${g.target.ticketPrice}`, g.x, g.y, '#ffe7c4');
     } else if (b.kind === 'restroom') {
       g.happiness = clamp(g.happiness + 3, 0, 100);
       g.energy = clamp(g.energy + 6, 0, 100);
+      g.target.serviceTimer = 0.8;
+      g.target.operating = false;
       g.interactCooldown = 5;
     }
     g.target = null;

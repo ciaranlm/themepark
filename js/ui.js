@@ -24,15 +24,17 @@ export class UI {
     this.statusBar = document.getElementById('statusBar');
     this.notifications = document.getElementById('notifications');
     this.pauseBtn = document.getElementById('pauseBtn');
-    this.playBtn = document.getElementById('playBtn');
-    this.fastBtn = document.getElementById('fastBtn');
+    this.speed1Btn = document.getElementById('speed1Btn');
+    this.speed2Btn = document.getElementById('speed2Btn');
+    this.speed3Btn = document.getElementById('speed3Btn');
     this.setupManagementModal();
   }
 
   setupTimeControls() {
-    this.pauseBtn.onclick = () => this.game.timeControls.setState('pause');
-    this.playBtn.onclick = () => this.game.timeControls.setState('play');
-    this.fastBtn.onclick = () => this.game.timeControls.setState('fast');
+    this.pauseBtn.onclick = () => this.game.timeControls.setSpeed(0);
+    this.speed1Btn.onclick = () => this.game.timeControls.setSpeed(1);
+    this.speed2Btn.onclick = () => this.game.timeControls.setSpeed(2);
+    this.speed3Btn.onclick = () => this.game.timeControls.setSpeed(3);
   }
 
   setupManagementModal() {
@@ -139,7 +141,7 @@ export class UI {
       lifetimeRevenue: economy.lifetimeRevenue,
     });
 
-    for (const [state, btn] of [['pause', this.pauseBtn], ['play', this.playBtn], ['fast', this.fastBtn]]) btn.classList.toggle('active-speed', timeControls.state === state);
+    for (const [speed, btn] of [[0, this.pauseBtn], [1, this.speed1Btn], [2, this.speed2Btn], [3, this.speed3Btn]]) btn.classList.toggle('active-speed', timeControls.gameSpeed === speed);
   }
 
   updateInfoPanel(hoverTile) {

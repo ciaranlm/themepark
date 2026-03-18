@@ -15,7 +15,7 @@ body { margin: 0; font-family: Verdana, Tahoma, Arial, sans-serif; font-size: 12
 .stat label { color: var(--muted); font-size: 10px; }
 .objective { background: #b9c9d9; border: 1px solid #415872; padding: 6px; font-weight: 700; color: #1f3b55; display: flex; align-items: center; }
 .time-controls { display: grid; grid-template-rows: auto auto auto; gap: 2px; padding: 4px 6px; background: #8ca8c2; }
-.time-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+.time-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
 .active-speed { background: #9ed1f3; border-color: #1f5f8d; }
 .actions { display: flex; gap: 4px; }
 button, input { border: 1px solid #1c3046; box-shadow: inset 1px 1px 0 #dce5ee, inset -1px -1px 0 #4d6581; background: #91a7bf; color: #11283d; font-weight: 700; font-size: 11px; padding: 4px 8px; }
