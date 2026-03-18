@@ -1,3 +1,9 @@
+/**
+ * UI system view helpers.
+ *
+ * Owns DOM reads/writes and mirrors data from the shared state store so future
+ * changes can extend panels and controls without coupling to simulation code.
+ */
 import { BUILDING_DEFINITIONS, CATEGORY_ORDER } from './rideDefinitions.js';
 
 export class UI {
@@ -45,39 +51,41 @@ export class UI {
 
   openManagement() {
     this.modal.classList.remove('hidden');
-    this.parkNameInput.value = this.game.parkName;
-    this.entryFeeInput.value = this.game.entryFee;
+    this.parkNameInput.value = this.game.state.snapshot.parkName;
+    this.entryFeeInput.value = this.game.state.snapshot.entryFee;
     this.renderManagementStats();
   }
 
   closeManagement() { this.applyManagementEdits(); this.modal.classList.add('hidden'); }
 
   adjustFee(delta) {
-    const next = Math.max(0, Math.min(60, Number(this.entryFeeInput.value || this.game.entryFee) + delta));
+    const next = Math.max(0, Math.min(60, Number(this.entryFeeInput.value || this.game.state.snapshot.entryFee) + delta));
     this.entryFeeInput.value = next;
     this.applyManagementEdits();
   }
 
   applyManagementEdits() {
-    this.game.parkName = (this.parkNameInput.value || 'Unnamed Park').trim() || 'Unnamed Park';
-    this.game.entryFee = Math.max(0, Math.min(60, Number(this.entryFeeInput.value || 0)));
+    this.game.state.patch({
+      parkName: (this.parkNameInput.value || 'Unnamed Park').trim() || 'Unnamed Park',
+      entryFee: Math.max(0, Math.min(60, Number(this.entryFeeInput.value || 0))),
+    });
     this.renderManagementStats();
   }
 
   renderManagementStats() {
-    const fee = this.game.entryFee;
+    const { entryFee: fee, lifetimeGuests, lifetimeRevenue, currentDay, parkRating } = this.game.state.snapshot;
     const reaction = fee > 32 ? 'Guests think the gate price is high and arrivals will slow.' : fee < 6 ? 'Low entry price draws larger crowds but less entry revenue.' : 'Current entry price is reasonable for a growing park.';
     this.feeReaction.textContent = reaction;
     this.managementStats.innerHTML = `
-      <div><strong>Lifetime Guests:</strong> ${this.game.lifetimeGuests}</div>
-      <div><strong>Lifetime Revenue:</strong> $${Math.round(this.game.lifetimeRevenue)}</div>
-      <div><strong>Days Open:</strong> ${this.game.currentDay}</div>
-      <div><strong>Tier:</strong> ${this.game.parkRating > 82 ? 'Premier Park' : this.game.parkRating > 65 ? 'Regional Park' : 'Starter Park'}</div>`;
+      <div><strong>Lifetime Guests:</strong> ${lifetimeGuests}</div>
+      <div><strong>Lifetime Revenue:</strong> $${Math.round(lifetimeRevenue)}</div>
+      <div><strong>Days Open:</strong> ${currentDay}</div>
+      <div><strong>Tier:</strong> ${parkRating > 82 ? 'Premier Park' : parkRating > 65 ? 'Regional Park' : 'Starter Park'}</div>`;
   }
 
   renderBuildPanel() {
     this.buildButtons.innerHTML = '';
-    const selected = BUILDING_DEFINITIONS[this.game.selectedBuild];
+    const selected = BUILDING_DEFINITIONS[this.game.state.snapshot.selectedBuild];
     const state = this.game.objectives.stateFor(selected);
     this.buildPreview.innerHTML = `<div class="info-card"><strong>${selected.name}</strong><p>Size ${selected.width}x${selected.height} • Cost $${selected.cost} • Upkeep $${selected.upkeep}</p><p>Status: ${state}</p><p>${state === 'locked' ? this.game.objectives.lockReason(selected) : 'Ready to build'}</p></div>`;
 
@@ -92,11 +100,11 @@ export class UI {
         const status = this.game.objectives.stateFor(b);
         const unlocked = status !== 'locked';
         const btn = document.createElement('button');
-        btn.className = `build-btn ${this.game.selectedBuild === b.id ? 'active' : ''} ${status}`;
+        btn.className = `build-btn ${this.game.state.snapshot.selectedBuild === b.id ? 'active' : ''} ${status}`;
         btn.disabled = !unlocked;
         btn.title = `${b.name} (${b.width}x${b.height})\nCost $${b.cost} • Upkeep $${b.upkeep}\n${unlocked ? 'Available' : this.game.objectives.lockReason(b)}`;
         btn.innerHTML = `<strong>${b.name}</strong><small>$${b.cost} • ${b.width}x${b.height}</small><em>${status === 'locked' ? this.game.objectives.lockReason(b) : status === 'new' ? 'Newly unlocked!' : 'Available'}</em>`;
-        btn.onclick = () => { this.game.selectedBuild = b.id; this.renderBuildPanel(); this.updateInfoPanel(this.game.selectedTile); };
+        btn.onclick = () => { this.game.state.patch({ selectedBuild: b.id }); this.renderBuildPanel(); this.updateInfoPanel(this.game.state.snapshot.selectedTile); };
         grid.appendChild(btn);
       });
       wrap.appendChild(grid);
@@ -114,25 +122,29 @@ export class UI {
 
   updateStats() {
     const { economy, guestManager, timeControls } = this.game;
+    const state = this.game.state.snapshot;
     this.moneyStat.textContent = `$${Math.floor(economy.money)}`;
     this.guestStat.textContent = `${guestManager.guests.length}`;
-    this.ratingStat.textContent = `${Math.round(this.game.parkRating)}`;
+    this.ratingStat.textContent = `${Math.round(state.parkRating)}`;
     this.profitStat.textContent = `$${Math.round(economy.dailyProfit)}/day`;
-    this.entryFeeStat.textContent = `$${this.game.entryFee}`;
-    this.parkNameStat.textContent = this.game.parkName;
+    this.entryFeeStat.textContent = `$${state.entryFee}`;
+    this.parkNameStat.textContent = state.parkName;
     this.objectiveStat.textContent = 'Grow your park: expand attractions, rating, and guest comfort.';
     this.timeState.textContent = timeControls.label();
     this.dayStat.textContent = `Day ${timeControls.day}`;
 
-    this.game.currentDay = timeControls.day;
-    this.game.lifetimeGuests = economy.totalGuestsServed;
-    this.game.lifetimeRevenue = economy.lifetimeRevenue;
+    this.game.state.patch({
+      currentDay: timeControls.day,
+      lifetimeGuests: economy.totalGuestsServed,
+      lifetimeRevenue: economy.lifetimeRevenue,
+    });
 
     for (const [state, btn] of [['pause', this.pauseBtn], ['play', this.playBtn], ['fast', this.fastBtn]]) btn.classList.toggle('active-speed', timeControls.state === state);
   }
 
   updateInfoPanel(hoverTile) {
-    const { parkRating, guestManager, selectedStructure, selectedBuild } = this.game;
+    const { guestManager } = this.game;
+    const { parkRating, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue } = this.game.state.snapshot;
     const avgH = guestManager.averageHappiness();
     const build = BUILDING_DEFINITIONS[selectedBuild];
     const hover = hoverTile ? this.game.map.getTile(hoverTile.x, hoverTile.y) : null;
@@ -151,8 +163,8 @@ export class UI {
     this.infoContent.innerHTML = `
       <div class="info-card"><strong>Park Overview</strong>
       <p>Guest happiness: ${avgH.toFixed(1)}%</p><div class="progress"><span style="width:${avgH}%"></span></div>
-      <p>Rating: ${Math.round(parkRating)} • Entry Fee: $${this.game.entryFee}</p>
-      <p>Lifetime guests ${this.game.lifetimeGuests} • Revenue $${Math.round(this.game.lifetimeRevenue)}</p></div>
+      <p>Rating: ${Math.round(parkRating)} • Entry Fee: $${entryFee}</p>
+      <p>Lifetime guests ${lifetimeGuests} • Revenue $${Math.round(lifetimeRevenue)}</p></div>
       <div class="info-card"><strong>Selected Build</strong>
       <p>${build.name} (${build.width}x${build.height})</p>
       <p>Cost $${build.cost} • Upkeep $${build.upkeep}</p>
@@ -161,5 +173,11 @@ export class UI {
       <p>${hoverTile ? `Tile ${hoverTile.x},${hoverTile.y} • Terrain ${hover?.base || 'grass'}` : 'Move cursor over map.'}</p></div>`;
   }
 
+
+  timeLabel() { return this.game.timeControls.label(); }
+
+  addFloatingText(text, x, y, color) { this.game.state.addFloatingText(text, x, y, color); }
+
   setHint(text) { this.statusBar.textContent = text; }
 }
+
