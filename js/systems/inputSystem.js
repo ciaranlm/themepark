@@ -17,19 +17,29 @@ export class InputSystem {
     this.economy = economy;
     this.objectives = objectives;
     this.ui = ui;
+    this.pointerState = null;
+    this.dragThreshold = 6;
   }
 
   attach() {
     this.canvas.oncontextmenu = (event) => event.preventDefault();
     this.canvas.addEventListener('mousedown', (event) => this.handlePointerDown(event));
     this.canvas.addEventListener('mousemove', (event) => this.handlePointerMove(event));
+    window.addEventListener('mouseup', (event) => this.handlePointerUp(event));
     this.canvas.addEventListener('mouseleave', () => this.clearHoverState());
+    this.canvas.addEventListener('wheel', (event) => this.handleWheel(event), { passive: false });
+  }
+
+  eventToCanvasPoint(event) {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      sx: (event.clientX - rect.left) * (this.canvas.width / rect.width),
+      sy: (event.clientY - rect.top) * (this.canvas.height / rect.height),
+    };
   }
 
   pointerToTile(event) {
-    const rect = this.canvas.getBoundingClientRect();
-    const sx = (event.clientX - rect.left) * (this.canvas.width / rect.width);
-    const sy = (event.clientY - rect.top) * (this.canvas.height / rect.height);
+    const { sx, sy } = this.eventToCanvasPoint(event);
     const tile = this.renderer.screenToGrid(sx, sy);
     return this.map.inBounds(tile.x, tile.y) ? tile : null;
   }
@@ -54,35 +64,72 @@ export class InputSystem {
 
   updateCursor(preview, tile) {
     const hoveringStructure = tile ? this.map.structureAt(tile.x, tile.y) : null;
-    this.canvas.classList.toggle('cursor-build-valid', Boolean(tile && preview?.valid));
-    this.canvas.classList.toggle('cursor-build-invalid', Boolean(tile && preview && !preview.valid));
-    this.canvas.classList.toggle('cursor-remove', Boolean(tile && !preview && hoveringStructure));
+    const draggingCamera = Boolean(this.pointerState?.dragging);
+    this.canvas.classList.toggle('cursor-build-valid', Boolean(tile && preview?.valid && !draggingCamera));
+    this.canvas.classList.toggle('cursor-build-invalid', Boolean(tile && preview && !preview.valid && !draggingCamera));
+    this.canvas.classList.toggle('cursor-remove', Boolean(tile && !preview && hoveringStructure && !draggingCamera));
+    this.canvas.classList.toggle('cursor-pan', draggingCamera);
   }
 
   clearHoverState() {
+    if (this.pointerState?.dragging) return;
     this.state.patch({ hoverTile: null, placementPreview: null });
     this.updateCursor(null, null);
-    this.ui.setHint(`Move cursor over map to preview placement. • ${this.ui.timeLabel()}`);
+    this.ui.setHint(`Move cursor over map to preview placement. Wheel zoom • drag to pan. • ${this.ui.timeLabel()}`);
   }
 
   handlePointerDown(event) {
-    const tile = this.pointerToTile(event);
-    if (!tile) return;
+    const { sx, sy } = this.eventToCanvasPoint(event);
+    this.pointerState = {
+      button: event.button,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      lastClientX: event.clientX,
+      lastClientY: event.clientY,
+      startSx: sx,
+      startSy: sy,
+      lastSx: sx,
+      lastSy: sy,
+      dragging: event.button === 1,
+      moved: false,
+    };
 
-    this.state.patch({
-      selectedTile: tile,
-      selectedStructure: this.map.structureAt(tile.x, tile.y),
-    });
-
-    if (event.button === 2) {
-      this.removeAt(tile.x, tile.y);
-      return;
+    if (event.button === 1) {
+      event.preventDefault();
+      this.updateCursor(this.state.snapshot.placementPreview, this.state.snapshot.hoverTile);
+      this.ui.setHint(`Panning camera • Zoom ${(this.renderer.camera.zoom * 100).toFixed(0)}%`);
     }
-
-    this.placeAt(tile.x, tile.y);
   }
 
   handlePointerMove(event) {
+    const pointer = this.pointerState;
+    if (pointer) {
+      const { sx, sy } = this.eventToCanvasPoint(event);
+      const dx = sx - pointer.startSx;
+      const dy = sy - pointer.startSy;
+      if (!pointer.dragging && pointer.button !== 2 && Math.hypot(dx, dy) >= this.dragThreshold) {
+        pointer.dragging = true;
+      }
+      if (pointer.dragging) {
+        this.renderer.panBy(sx - pointer.lastSx, sy - pointer.lastSy);
+        pointer.lastSx = sx;
+        pointer.lastSy = sy;
+        pointer.lastClientX = event.clientX;
+        pointer.lastClientY = event.clientY;
+        pointer.moved = true;
+        this.updateCursor(this.state.snapshot.placementPreview, this.state.snapshot.hoverTile);
+        const tile = this.pointerToTile(event);
+        this.state.patch({ hoverTile: tile, selectedTile: tile, selectedStructure: tile ? this.map.structureAt(tile.x, tile.y) : null });
+        this.refreshPlacementPreview(tile);
+        this.ui.setHint(`Panning camera • Zoom ${(this.renderer.camera.zoom * 100).toFixed(0)}%`);
+        return;
+      }
+      pointer.lastClientX = event.clientX;
+      pointer.lastClientY = event.clientY;
+      pointer.lastSx = sx;
+      pointer.lastSy = sy;
+    }
+
     const tile = this.pointerToTile(event);
     this.state.patch({ hoverTile: tile, selectedTile: tile, selectedStructure: tile ? this.map.structureAt(tile.x, tile.y) : null });
     if (!tile) {
@@ -97,7 +144,45 @@ export class InputSystem {
       ? `${hoverStructure.name} ${hoverStructure.width}x${hoverStructure.height}`
       : `${tileData.base}${tileData.structureId ? ' • occupied' : ''}`;
     const placementState = check.valid ? 'valid' : check.reason;
-    this.ui.setHint(`Tile (${tile.x},${tile.y}) • ${hoverSummary} • Placement ${placementState} • ${this.ui.timeLabel()}`);
+    this.ui.setHint(`Tile (${tile.x},${tile.y}) • ${hoverSummary} • Placement ${placementState} • Zoom ${(this.renderer.camera.zoom * 100).toFixed(0)}% • ${this.ui.timeLabel()}`);
+  }
+
+  handlePointerUp(event) {
+    if (!this.pointerState || event.button !== this.pointerState.button) return;
+
+    const tile = this.pointerToTile(event);
+    const wasDragging = this.pointerState.dragging && this.pointerState.moved;
+    this.pointerState = null;
+
+    if (wasDragging) {
+      this.updateCursor(this.state.snapshot.placementPreview, tile);
+      return;
+    }
+
+    if (!tile) return;
+
+    this.state.patch({
+      selectedTile: tile,
+      selectedStructure: this.map.structureAt(tile.x, tile.y),
+    });
+
+    if (event.button === 2) {
+      this.removeAt(tile.x, tile.y);
+      return;
+    }
+
+    if (event.button === 0) this.placeAt(tile.x, tile.y);
+  }
+
+  handleWheel(event) {
+    event.preventDefault();
+    const { sx, sy } = this.eventToCanvasPoint(event);
+    const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+    const zoom = this.renderer.zoomAt(sx, sy, factor);
+    const tile = this.pointerToTile(event);
+    this.state.patch({ hoverTile: tile, selectedTile: tile, selectedStructure: tile ? this.map.structureAt(tile.x, tile.y) : null });
+    this.refreshPlacementPreview(tile);
+    this.ui.setHint(`Zoom ${(zoom * 100).toFixed(0)}% • Drag to pan • ${this.ui.timeLabel()}`);
   }
 
   removeAt(x, y) {

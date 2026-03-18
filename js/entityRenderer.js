@@ -11,15 +11,20 @@ const booth = (ctx, body, roof) => {
   ctx.fillStyle = '#f0f2f7'; ctx.fillRect(-4, -11, 8, 7);
 };
 
-export const drawGuest = (ctx, x, y, c1, c2, bob = 0) => {
-  shadow(ctx, x, y + 1, 1.8, 1, 0.25);
-  ctx.fillStyle = c1; ctx.fillRect(x - 0.9, y - 4 + bob, 1.8, 3);
-  ctx.fillStyle = c2; ctx.fillRect(x - 0.6, y - 5.5 + bob, 1.2, 1.2);
-};
-
-export const drawStructure = (ctx, type, x, y, anim) => {
+export const drawGuest = (ctx, x, y, c1, c2, bob = 0, scale = 1) => {
   ctx.save();
   ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  shadow(ctx, 0, 1, 1.8, 1, 0.25);
+  ctx.fillStyle = c1; ctx.fillRect(-0.9, -4 + bob, 1.8, 3);
+  ctx.fillStyle = c2; ctx.fillRect(-0.6, -5.5 + bob, 1.2, 1.2);
+  ctx.restore();
+};
+
+export const drawStructure = (ctx, type, x, y, anim, scale = 1) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
   if (type === 'carousel') {
     shadow(ctx, 0, 1, 12, 5);
     ctx.fillStyle = '#754ea9'; ctx.beginPath(); ctx.ellipse(0, -5, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
