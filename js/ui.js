@@ -31,6 +31,7 @@ export class UI {
     this.speed2Btn = document.getElementById('speed2Btn');
     this.speed3Btn = document.getElementById('speed3Btn');
     this.setupManagementModal();
+    this.updateParkIdentity();
   }
 
   currency(value) {
@@ -39,6 +40,21 @@ export class UI {
 
   profitClass(value) {
     return value >= 0 ? 'finance-positive' : 'finance-negative';
+  }
+
+  normalizeParkName(name) {
+    return (name || 'Unnamed Park').trim().slice(0, 30) || 'Unnamed Park';
+  }
+
+  clampEntryFee(value) {
+    return Math.max(0, Math.min(60, Number(value) || 0));
+  }
+
+  updateParkIdentity() {
+    const { parkName, entryFee } = this.game.state.snapshot;
+    this.parkNameStat.textContent = parkName;
+    this.entryFeeStat.textContent = this.currency(entryFee);
+    document.title = `${parkName} • Retro Park Tycoon`;
   }
 
   setupTimeControls() {
@@ -58,8 +74,8 @@ export class UI {
     document.getElementById('closeParkModal').onclick = () => this.closeManagement();
     document.getElementById('feeDownBtn').onclick = () => this.adjustFee(-1);
     document.getElementById('feeUpBtn').onclick = () => this.adjustFee(1);
-    this.parkNameInput.onchange = () => this.applyManagementEdits();
-    this.entryFeeInput.onchange = () => this.applyManagementEdits();
+    this.parkNameInput.oninput = () => this.applyManagementEdits();
+    this.entryFeeInput.oninput = () => this.applyManagementEdits();
   }
 
   openManagement() {
@@ -69,27 +85,34 @@ export class UI {
     this.renderManagementStats();
   }
 
-  closeManagement() { this.applyManagementEdits(); this.modal.classList.add('hidden'); }
+  closeManagement() {
+    this.applyManagementEdits();
+    this.modal.classList.add('hidden');
+  }
 
   adjustFee(delta) {
-    const next = Math.max(0, Math.min(60, Number(this.entryFeeInput.value || this.game.state.snapshot.entryFee) + delta));
+    const next = this.clampEntryFee(Number(this.entryFeeInput.value || this.game.state.snapshot.entryFee) + delta);
     this.entryFeeInput.value = next;
     this.applyManagementEdits();
   }
 
   applyManagementEdits() {
     this.game.state.patch({
-      parkName: (this.parkNameInput.value || 'Unnamed Park').trim() || 'Unnamed Park',
-      entryFee: Math.max(0, Math.min(60, Number(this.entryFeeInput.value || 0))),
+      parkName: this.normalizeParkName(this.parkNameInput.value),
+      entryFee: this.clampEntryFee(this.entryFeeInput.value),
     });
+    this.updateParkIdentity();
     this.renderManagementStats();
+    this.updateInfoPanel(this.game.state.snapshot.hoverTile);
   }
 
   renderManagementStats() {
-    const { entryFee: fee, lifetimeGuests, lifetimeRevenue, currentDay, parkRating } = this.game.state.snapshot;
+    const { parkName, entryFee: fee, lifetimeGuests, lifetimeRevenue, currentDay, parkRating } = this.game.state.snapshot;
     const reaction = fee > 32 ? 'Guests think the gate price is high and arrivals will slow.' : fee < 6 ? 'Low entry price draws larger crowds but less entry revenue.' : 'Current entry price is reasonable for a growing park.';
     this.feeReaction.textContent = reaction;
     this.managementStats.innerHTML = `
+      <div><strong>Park:</strong> ${parkName}</div>
+      <div><strong>Entry Price:</strong> ${this.currency(fee)}</div>
       <div><strong>Lifetime Guests:</strong> ${lifetimeGuests}</div>
       <div><strong>Lifetime Revenue:</strong> ${this.currency(lifetimeRevenue)}</div>
       <div><strong>Lifetime Expenses:</strong> ${this.currency(this.game.economy.lifetimeExpenses)}</div>
@@ -151,13 +174,12 @@ export class UI {
     const { economy, guestManager, timeControls } = this.game;
     const state = this.game.state.snapshot;
     this.moneyStat.textContent = this.currency(Math.floor(economy.money));
-    this.guestStat.textContent = `${guestManager.guests.length}`;
-    this.ratingStat.textContent = `${Math.round(state.parkRating)}`;
+    this.guestStat.textContent = guestManager.guests.length;
+    this.ratingStat.textContent = Math.round(state.parkRating);
     this.profitStat.textContent = `${this.currency(economy.dailyProfit)}/day`;
     this.incomeStat.textContent = `${this.currency(economy.dailyRevenue)}/day`;
     this.costStat.textContent = `${this.currency(economy.lastOperatingCost)}/tick`;
-    this.entryFeeStat.textContent = this.currency(state.entryFee);
-    this.parkNameStat.textContent = state.parkName;
+    this.updateParkIdentity();
     this.objectiveStat.textContent = 'Grow your park: expand attractions, rating, and guest comfort.';
     this.timeState.textContent = timeControls.label();
     this.dayStat.textContent = `Day ${timeControls.day}`;
@@ -186,7 +208,7 @@ export class UI {
 
   updateInfoPanel(hoverTile) {
     const { guestManager, definitions, economy, map } = this.game;
-    const { parkRating, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue, placementPreview } = this.game.state.snapshot;
+    const { parkName, parkRating, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue, placementPreview } = this.game.state.snapshot;
     const avgH = guestManager.averageHappiness();
     const build = BUILDING_DEFINITIONS[selectedBuild];
     const hover = hoverTile ? this.game.map.getTile(hoverTile.x, hoverTile.y) : null;
@@ -237,8 +259,9 @@ export class UI {
 
     this.infoContent.innerHTML = `
       <div class="info-card"><strong>Park Overview</strong>
+      <p>Name: ${parkName}</p>
       <p>Guest happiness: ${avgH.toFixed(1)}%</p><div class="progress"><span style="width:${avgH}%"></span></div>
-      <p>Rating: ${Math.round(parkRating)} • Entry Fee: ${this.currency(entryFee)}</p>
+      <p>Rating: ${Math.round(parkRating)} • Entry Price: ${this.currency(entryFee)}</p>
       <p>Lifetime guests ${lifetimeGuests} • Revenue ${this.currency(lifetimeRevenue)}</p>
       <p>Daily income ${this.currency(economy.dailyRevenue)} • Daily expenses ${this.currency(economy.dailyExpenses)} • Profit ${this.currency(economy.dailyProfit)}</p></div>
       <div class="info-card"><strong>Income Snapshot</strong>
@@ -259,5 +282,7 @@ export class UI {
 
   addFloatingText(text, x, y, color) { this.game.state.addFloatingText(text, x, y, color); }
 
-  setHint(text) { this.statusBar.textContent = text; }
+  setHint(text) {
+    this.statusBar.textContent = text;
+  }
 }
