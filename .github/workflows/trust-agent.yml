@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Send signal to Trust Agent
         run: |
-          curl -X POST https://<TA_ENDPOINT>/ingest \
+          curl -X POST https://portal.securecodewarrior.com/ingest \
             -H "Authorization: Bearer ${{ secrets.TA_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
