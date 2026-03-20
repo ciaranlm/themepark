@@ -75,3 +75,4 @@ button:hover { background: #a6bad0; }
 .finance-negative { color: #7a2323; }
 .detail-list { display: grid; gap: 4px; margin-top: 6px; }
 .detail-row { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid rgba(63,86,111,0.45); padding-top: 4px; }
+.rating-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; font-weight: 700; color: #173146; }
