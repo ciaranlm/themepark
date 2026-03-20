@@ -79,31 +79,32 @@ export const RIDE_CATALOGUE = [
     id: 'bumperCars', name: 'Bumper Cars', category: 'Family Rides', kind: 'ride',
     size: { width: 3, height: 2 }, cost: 980, upkeep: 8, ticketPrice: 19,
     excitement: 26, intensity: 16, nausea: 9, capacity: 22, cycleTime: 10,
-    visualType: 'bumperCars', animation: 'spin',
+    visualType: 'bumperCars', animation: 'spin', unlockArgs: ['guests', 35, 'Unlock at 35 lifetime guests'],
   }),
   ride({
     id: 'swing', name: 'Swing Ride', category: 'Family Rides', kind: 'ride',
     size: { width: 2, height: 2 }, cost: 880, upkeep: 9, ticketPrice: 22,
     excitement: 24, intensity: 18, nausea: 10, capacity: 24, cycleTime: 11,
-    visualType: 'swing', animation: 'swing',
+    visualType: 'swing', animation: 'swing', unlockArgs: ['day', 3, 'Unlock on Day 3'],
   }),
   ride({
     id: 'dropTower', name: 'Drop Tower', category: 'Thrill Rides', kind: 'ride',
     size: { width: 2, height: 3 }, cost: 4100, upkeep: 31, ticketPrice: 52,
     excitement: 44, intensity: 43, nausea: 18, capacity: 24, cycleTime: 14,
-    visualType: 'dropTower', animation: 'tower', unlockArgs: ['revenue', 5000, 'Unlock at $5000 lifetime revenue'],
+    visualType: 'dropTower', animation: 'tower', unlockArgs: ['revenue', 6500, 'Unlock at $6500 lifetime revenue'],
   }),
   ride({
     id: 'logFlume', name: 'Log Flume', category: 'Thrill Rides', kind: 'ride',
     size: { width: 4, height: 4 }, cost: 3200, upkeep: 24, ticketPrice: 42,
     excitement: 66, intensity: 32, nausea: 14, capacity: 56, cycleTime: 16,
-    visualType: 'logFlume', animation: 'water',
+    visualType: 'logFlume', animation: 'water', unlockArgs: ['revenue', 3200, 'Unlock at $3200 lifetime revenue'],
   }),
   ride({
     id: 'miniCoaster', name: 'Mini Coaster', category: 'Coasters', kind: 'ride',
     size: { width: 4, height: 4 }, cost: 2400, upkeep: 18, ticketPrice: 34,
     excitement: 56, intensity: 34, nausea: 18, capacity: 44, cycleTime: 13,
     visualType: 'miniCoaster', animation: 'coaster', tags: ['coaster'], placement: { minSize: { width: 4, height: 4 } },
+    unlockArgs: ['guests', 70, 'Unlock at 70 lifetime guests'],
   }),
   ride({
     id: 'foodStall', name: 'Food Stall', category: 'Food / Drink', kind: 'food',
@@ -127,7 +128,7 @@ export const RIDE_CATALOGUE = [
     id: 'infoKiosk', name: 'Info Kiosk', category: 'Facilities', kind: 'facility',
     size: { width: 1, height: 1 }, cost: 240, upkeep: 2, ticketPrice: 0,
     excitement: 2, intensity: 0, nausea: 0, capacity: 12, cycleTime: 4,
-    visualType: 'kiosk', unlockArgs: ['guests', 90, 'Unlock at 90 lifetime guests'],
+    visualType: 'kiosk', unlockArgs: ['guests', 55, 'Unlock at 55 lifetime guests'],
   }),
   ride({
     id: 'bench', name: 'Bench', category: 'Scenery', kind: 'scenery',
@@ -139,11 +140,11 @@ export const RIDE_CATALOGUE = [
   }),
   ride({
     id: 'lamp', name: 'Lamp', category: 'Scenery', kind: 'scenery',
-    size: { width: 1, height: 1 }, cost: 38, excitement: 1, visualType: 'lamp', animation: 'glow', unlockArgs: ['day', 5, 'Unlock at Day 5'],
+    size: { width: 1, height: 1 }, cost: 38, excitement: 1, visualType: 'lamp', animation: 'glow', unlockArgs: ['day', 4, 'Unlock on Day 4'],
   }),
   ride({
     id: 'flowers', name: 'Flower Bed', category: 'Scenery', kind: 'scenery',
-    size: { width: 1, height: 1 }, cost: 26, excitement: 3, visualType: 'flowers', unlockArgs: ['rating', 72, 'Unlock at park rating 72'],
+    size: { width: 1, height: 1 }, cost: 26, excitement: 3, visualType: 'flowers', unlockArgs: ['revenue', 1600, 'Unlock at $1600 lifetime revenue'],
   }),
   ride({
     id: 'statue', name: 'Park Statue', category: 'Scenery', kind: 'scenery',
