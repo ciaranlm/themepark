@@ -4,20 +4,34 @@
  * Centralizes ride/facility counting and park-rating math so future balance
  * changes have one clear home without coupling them to rendering or input.
  */
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
 export class Simulation {
   constructor(game) {
     this.game = game;
   }
 
   computeParkRating() {
-    let rideCount = 0, stallCount = 0, scenery = 0, facilities = 0, thrill = 0;
+    let rideCount = 0;
+    let serviceCount = 0;
+    let totalQueue = 0;
+    let totalRideTicket = 0;
+    let totalRideExcitement = 0;
+    const varietyIds = new Set();
     const operatingCostBreakdown = [];
+
     for (const s of Object.values(this.game.map.structures)) {
       const def = this.game.definitions[s.id];
-      if (def.kind === 'ride') { rideCount++; thrill += def.excitement; }
-      if (def.kind === 'food' || def.kind === 'drink') stallCount++;
-      if (def.kind === 'scenery') scenery++;
-      if (def.kind === 'facility' || def.kind === 'restroom') facilities++;
+      if (def.kind === 'ride') {
+        rideCount += 1;
+        totalQueue += (s.queue?.length ?? 0) + (s.riders?.length ?? 0);
+        totalRideTicket += s.ticketPrice || 0;
+        totalRideExcitement += def.excitement || 0;
+        varietyIds.add(def.id);
+      }
+      if (def.kind === 'food' || def.kind === 'drink' || def.kind === 'facility' || def.kind === 'restroom') {
+        serviceCount += 1;
+      }
 
       const operatingMultiplier = s.connected === false ? 0 : (def.kind === 'ride'
         ? (s.operatingState === 'running' || s.operatingState === 'loading' || s.operatingState === 'unloading' ? 1 : 0.35)
@@ -31,12 +45,43 @@ export class Simulation {
         active: operatingMultiplier > 0.5,
       });
     }
-    const happiness = this.game.guestManager.averageHappiness();
-    const variety = Math.min(24, rideCount * 3.3 + stallCount * 1.9);
-    const polish = Math.min(20, scenery * 1.5 + facilities * 2.6);
-    const thrillScore = Math.min(15, thrill / 20);
-    const crowdingPenalty = Math.max(0, this.game.guestManager.guests.length - (rideCount * 18 + stallCount * 12 + 20)) * 0.28;
-    this.game.state.patch({ parkRating: Math.max(1, Math.min(100, happiness * 0.5 + variety + polish + thrillScore - crowdingPenalty)) });
+
+    const happinessScore = clamp(this.game.guestManager.averageHappiness(), 0, 100);
+    const averageQueue = rideCount > 0 ? totalQueue / rideCount : 0;
+    const queueScore = rideCount === 0 ? 75 : clamp(100 - averageQueue * 9, 35, 100);
+    const varietyScore = clamp(rideCount === 0 ? 25 : (varietyIds.size / Math.max(1, Math.min(6, rideCount))) * 100, 25, 100);
+
+    const averageRidePrice = rideCount > 0 ? totalRideTicket / rideCount : 0;
+    const averageRideExcitement = rideCount > 0 ? totalRideExcitement / rideCount : 18;
+    const targetSpend = Math.max(12, averageRideExcitement * 0.55 + serviceCount * 1.2 + 6);
+    const actualSpend = this.game.state.snapshot.entryFee + averageRidePrice;
+    const valueGap = Math.max(0, actualSpend - targetSpend);
+    const valueForMoneyScore = clamp(rideCount === 0 ? 80 : 100 - valueGap * 6, 40, 100);
+
+    const parkRating = clamp(
+      happinessScore * 0.4
+      + queueScore * 0.2
+      + varietyScore * 0.2
+      + valueForMoneyScore * 0.2,
+      1,
+      100,
+    );
+
+    this.game.state.patch({
+      parkRating,
+      ratingBreakdown: {
+        happiness: happinessScore,
+        queues: queueScore,
+        variety: varietyScore,
+        value: valueForMoneyScore,
+        averageQueue,
+        rideCount,
+        uniqueRideTypes: varietyIds.size,
+        targetSpend,
+        actualSpend,
+      },
+    });
+
     return { operatingCostBreakdown };
   }
 }

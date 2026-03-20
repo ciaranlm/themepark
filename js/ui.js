@@ -124,6 +124,7 @@ export class UI {
     this.buildButtons.innerHTML = '';
     const selected = BUILDING_DEFINITIONS[this.game.state.snapshot.selectedBuild];
     const selectedState = this.game.objectives.stateFor(selected);
+    const selectedLockReason = this.game.objectives.lockReason(selected, this.game);
     const selectedShortfall = Math.max(0, Math.ceil(selected.cost - this.game.economy.money));
     const affordText = this.game.economy.canAfford(selected.cost) ? 'Ready to build now.' : `Need $${selectedShortfall} more to build immediately.`;
     const statusText = selectedState === 'locked' ? this.game.objectives.lockReason(selected) : affordText;
@@ -160,7 +161,7 @@ export class UI {
         const unlocked = status !== 'locked';
         const canAfford = this.game.economy.canAfford(b.cost);
         const explanation = !unlocked
-          ? this.game.objectives.lockReason(b)
+          ? this.game.objectives.lockReason(b, this.game)
           : canAfford
             ? 'Ready to build now'
             : `Need $${Math.ceil(b.cost - this.game.economy.money)} more`;
@@ -231,7 +232,7 @@ ${explanation}`;
 
   updateInfoPanel(hoverTile) {
     const { guestManager, definitions, economy, map } = this.game;
-    const { parkName, parkRating, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue, placementPreview } = this.game.state.snapshot;
+    const { parkName, parkRating, ratingBreakdown, selectedStructure, selectedBuild, entryFee, lifetimeGuests, lifetimeRevenue, placementPreview } = this.game.state.snapshot;
     const avgH = guestManager.averageHappiness();
     const build = BUILDING_DEFINITIONS[selectedBuild];
     const hover = hoverTile ? this.game.map.getTile(hoverTile.x, hoverTile.y) : null;
@@ -295,7 +296,16 @@ ${explanation}`;
       <p>${build.name} (${build.width}x${build.height}) • ${build.category}</p>
       <p>Build $${build.cost} • Ticket $${build.ticketPrice} • Upkeep $${build.upkeep}</p>
       <p>Exc ${build.excitement} • Int ${build.intensity} • Nau ${build.nausea} • Cap ${build.capacity}</p>
-      <p>Status: ${this.game.objectives.stateFor(build)} ${this.game.objectives.stateFor(build) === 'locked' ? `• ${this.game.objectives.lockReason(build)}` : this.game.economy.canAfford(build.cost) ? '• Ready to build now' : `• Need $${Math.ceil(build.cost - this.game.economy.money)} more`}</p></div>
+      <p>Status: ${this.game.objectives.stateFor(build)} ${this.game.objectives.stateFor(build) === 'locked' ? `• ${this.game.objectives.lockReason(build, this.game)}` : this.game.economy.canAfford(build.cost) ? '• Ready to build now' : `• Need $${Math.ceil(build.cost - this.game.economy.money)} more`}</p></div>
+      <div class="info-card"><strong>Rating Breakdown</strong>
+      <p>Overall rating: ${Math.round(parkRating)} / 100</p>
+      <div class="rating-row"><span>Guest happiness</span><strong>${Math.round(ratingBreakdown.happiness)}</strong></div><div class="progress"><span style="width:${ratingBreakdown.happiness}%"></span></div>
+      <div class="rating-row"><span>Queues</span><strong>${Math.round(ratingBreakdown.queues)}</strong></div><div class="progress"><span style="width:${ratingBreakdown.queues}%"></span></div>
+      <div class="rating-row"><span>Ride variety</span><strong>${Math.round(ratingBreakdown.variety)}</strong></div><div class="progress"><span style="width:${ratingBreakdown.variety}%"></span></div>
+      <div class="rating-row"><span>Value for money</span><strong>${Math.round(ratingBreakdown.value)}</strong></div><div class="progress"><span style="width:${ratingBreakdown.value}%"></span></div>
+      <p>Queues stay healthy when average queue per ride is low. Current average: ${ratingBreakdown.averageQueue.toFixed(1)}.</p>
+      <p>Variety uses unique ride types built: ${ratingBreakdown.uniqueRideTypes} across ${ratingBreakdown.rideCount} rides.</p>
+      <p>Value compares average entry + ride spend (${this.currency(ratingBreakdown.actualSpend)}) against a simple target (${this.currency(ratingBreakdown.targetSpend)}).</p></div>
       <div class="info-card"><strong>Hover Tile</strong>
       <p>${hoverTile ? `Tile ${hoverTile.x},${hoverTile.y} • Terrain ${hover?.base || 'grass'}` : 'Move cursor over map.'}</p>
       <p>${hoverTile && hover?.base === 'entrance' ? 'Guests spawn here and must use connected paths.' : placementPreview ? `Placement: ${placementPreview.valid ? 'Valid' : placementPreview.reason}` : 'Placement preview inactive.'}</p></div>`;
