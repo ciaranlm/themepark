@@ -96,6 +96,12 @@ export class IsoRenderer {
       const shimmer = Math.sin(time * 2.2 + tile.x * 0.3 + tile.y * 0.2) * 8;
       drawDiamond(ctx, x, y, this.tileW, this.tileH, water[tile.waterVariant], 'rgba(20,62,102,0.35)');
       drawDiamond(ctx, x, y + 2 * this.camera.zoom, this.tileW - 5 * this.camera.zoom, this.tileH - 6 * this.camera.zoom, `rgba(120,200,255,${0.16 + shimmer / 80})`, null);
+      ctx.strokeStyle = `rgba(180,230,255,${0.12 + shimmer / 70})`;
+      ctx.lineWidth = 1 * this.camera.zoom;
+      ctx.beginPath();
+      ctx.moveTo(x - 7 * this.camera.zoom, y + 7 * this.camera.zoom);
+      ctx.quadraticCurveTo(x, y + (5 + shimmer / 10) * this.camera.zoom, x + 7 * this.camera.zoom, y + 7 * this.camera.zoom);
+      ctx.stroke();
       return;
     }
 
@@ -173,7 +179,7 @@ export class IsoRenderer {
     for (const item of drawQueue) {
       if (item.guest) {
         const p = this.gridToScreen(item.guest.drawX, item.guest.drawY);
-        drawGuest(ctx, p.x, p.y + this.tileH / 2, item.guest.palette.body, item.guest.palette.head, Math.sin(time * 8 + item.guest.id) * 0.3, this.camera.zoom);
+        drawGuest(ctx, p.x, p.y + this.tileH / 2, item.guest.palette.body, item.guest.palette.head, item.guest.visual || { bob: Math.sin(time * 8 + item.guest.id) * 0.3 }, this.camera.zoom);
       } else {
         const s = item.structure;
         const anchor = this.gridToScreen(s.x + s.width / 2 - 0.5, s.y + s.height / 2 - 0.5);

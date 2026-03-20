@@ -46,6 +46,9 @@ export class GuestManager {
       leaveIntent: 0,
       visitHistory: {},
       palette: { body, head: '#f2d1b2' },
+      moveDir: { x: 1, y: 0 },
+      stridePhase: Math.random() * Math.PI * 2,
+      visual: { bob: 0, sway: 0, stride: 0, facing: 1, armSwing: 0 },
     });
     this.economy.recordRevenue(game.state.snapshot.entryFee, 'entry-fee');
   }
@@ -99,8 +102,20 @@ export class GuestManager {
       }
 
       this.moveGuest(g, dt);
-      g.drawX += (g.x - g.drawX) * 0.28;
-      g.drawY += (g.y - g.drawY) * 0.28;
+      const moving = Math.abs(g.x - g.drawX) + Math.abs(g.y - g.drawY) > 0.02;
+      const pace = moving ? 1 : 0.3;
+      g.stridePhase += dt * (moving ? 10 : 3.5);
+      const strideWave = Math.sin(g.stridePhase);
+      const bounceWave = Math.abs(Math.sin(g.stridePhase));
+      g.visual = {
+        bob: bounceWave * 0.75 * pace,
+        sway: strideWave * 0.8 * pace,
+        stride: strideWave * 0.7 * pace,
+        facing: g.moveDir.x < 0 ? -1 : 1,
+        armSwing: Math.cos(g.stridePhase) * 0.9 * pace,
+      };
+      g.drawX += (g.x - g.drawX) * 0.22;
+      g.drawY += (g.y - g.drawY) * 0.22;
       this.tryInteract(g, game);
       this.updateThought(g, dt, game);
       this.updateLeaveIntent(g);
@@ -204,6 +219,7 @@ export class GuestManager {
 
     const next = route?.nextStep;
     if (!next || (next.x === g.x && next.y === g.y)) return;
+    g.moveDir = { x: next.x - g.x, y: next.y - g.y };
     g.x = next.x;
     g.y = next.y;
   }
@@ -360,6 +376,9 @@ export class GuestManager {
       thoughtCooldown: g.thoughtCooldown ?? 0,
       queueComplaintRideId: g.queueComplaintRideId ?? null,
       priceComplaintRideId: g.priceComplaintRideId ?? null,
+      moveDir: g.moveDir ?? { x: 1, y: 0 },
+      stridePhase: g.stridePhase ?? 0,
+      visual: g.visual ?? { bob: 0, sway: 0, stride: 0, facing: 1, armSwing: 0 },
     }));
     this.spawnTimer = data.spawnTimer;
     this.nextId = data.nextId;
