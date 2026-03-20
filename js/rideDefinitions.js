@@ -107,6 +107,20 @@ export const RIDE_CATALOGUE = [
     unlockArgs: ['guests', 70, 'Unlock at 70 lifetime guests'],
   }),
   ride({
+    id: 'woodCoaster', name: 'Wooden Coaster', category: 'Coasters', kind: 'ride',
+    size: { width: 5, height: 4 }, cost: 5200, upkeep: 34, ticketPrice: 56,
+    excitement: 72, intensity: 46, nausea: 24, capacity: 60, cycleTime: 18,
+    visualType: 'woodCoaster', animation: 'coaster', tags: ['coaster'], placement: { minSize: { width: 5, height: 4 } },
+    unlockArgs: ['revenue', 8500, 'Unlock at $8500 lifetime revenue'],
+  }),
+  ride({
+    id: 'megaCoaster', name: 'Mega Coaster', category: 'Coasters', kind: 'ride',
+    size: { width: 6, height: 5 }, cost: 8600, upkeep: 52, ticketPrice: 74,
+    excitement: 86, intensity: 58, nausea: 29, capacity: 72, cycleTime: 20,
+    visualType: 'megaCoaster', animation: 'coaster', tags: ['coaster'], placement: { minSize: { width: 6, height: 5 } },
+    unlockArgs: ['guests', 180, 'Unlock at 180 lifetime guests'],
+  }),
+  ride({
     id: 'foodStall', name: 'Food Stall', category: 'Food / Drink', kind: 'food',
     size: { width: 1, height: 1 }, cost: 210, upkeep: 3, ticketPrice: 11,
     excitement: 4, intensity: 0, nausea: 0, capacity: 10, cycleTime: 6,
@@ -139,12 +153,24 @@ export const RIDE_CATALOGUE = [
     size: { width: 1, height: 1 }, cost: 30, excitement: 2, visualType: 'tree', animation: 'sway',
   }),
   ride({
+    id: 'hedge', name: 'Hedge', category: 'Scenery', kind: 'scenery',
+    size: { width: 1, height: 1 }, cost: 18, excitement: 1, visualType: 'hedge', animation: 'none',
+  }),
+  ride({
     id: 'lamp', name: 'Lamp', category: 'Scenery', kind: 'scenery',
     size: { width: 1, height: 1 }, cost: 38, excitement: 1, visualType: 'lamp', animation: 'glow', unlockArgs: ['day', 4, 'Unlock on Day 4'],
   }),
   ride({
     id: 'flowers', name: 'Flower Bed', category: 'Scenery', kind: 'scenery',
     size: { width: 1, height: 1 }, cost: 26, excitement: 3, visualType: 'flowers', unlockArgs: ['revenue', 1600, 'Unlock at $1600 lifetime revenue'],
+  }),
+  ride({
+    id: 'fountain', name: 'Fountain', category: 'Scenery', kind: 'scenery',
+    size: { width: 1, height: 1 }, cost: 95, upkeep: 1, excitement: 4, visualType: 'fountain', animation: 'splash', unlockArgs: ['revenue', 2600, 'Unlock at $2600 lifetime revenue'],
+  }),
+  ride({
+    id: 'arch', name: 'Garden Arch', category: 'Scenery', kind: 'scenery',
+    size: { width: 1, height: 1 }, cost: 48, excitement: 2, visualType: 'arch', unlockArgs: ['guests', 24, 'Unlock at 24 lifetime guests'],
   }),
   ride({
     id: 'statue', name: 'Park Statue', category: 'Scenery', kind: 'scenery',
