@@ -8,21 +8,32 @@
   </head>
   <body>
     <header class="topbar sim-window">
-      <div class="park-title-wrap">
+      <div class="hud-brand hud-card">
+        <div class="hud-kicker">Theme Park</div>
         <div id="parkNameStat">Sunset Gardens</div>
-        <button id="parkSettingsBtn">Park Settings</button>
+        <button id="parkSettingsBtn" class="secondary-btn">Park Settings</button>
       </div>
-      <div class="stat"><span class="ico">$</span><label>Cash</label><strong id="moneyStat">$0</strong></div>
-      <div class="stat"><span class="ico">G</span><label>Guests</label><strong id="guestStat">0</strong></div>
-      <div class="stat"><span class="ico">R</span><label>Rating</label><strong id="ratingStat">0</strong></div>
-      <div class="stat"><span class="ico">P</span><label>Profit</label><strong id="profitStat">$0/day</strong></div>
-      <div class="stat"><span class="ico">+</span><label>Income</label><strong id="incomeStat">$0/day</strong></div>
-      <div class="stat"><span class="ico">-</span><label>Running Cost</label><strong id="costStat">$0/tick</strong></div>
-      <div class="stat"><span class="ico">E</span><label>Entry Price</label><strong id="entryFeeStat">$0</strong></div>
-      <div class="objective" id="objectiveStat">Build paths and open your first rides.</div>
-      <div class="time-controls sim-window">
-        <div id="dayStat">Day 1</div>
-        <div id="timeState">Play x1</div>
+
+      <div class="hud-stats">
+        <div class="stat stat-money"><span class="ico">$</span><label>Money</label><strong id="moneyStat">$0</strong></div>
+        <div class="stat stat-guests"><span class="ico">☺</span><label>Guests</label><strong id="guestStat">0</strong></div>
+        <div class="stat stat-rating"><span class="ico">★</span><label>Rating</label><strong id="ratingStat">0</strong></div>
+      </div>
+
+      <div class="hud-economy hud-card">
+        <div class="mini-stat"><span>Profit</span><strong id="profitStat">$0/day</strong></div>
+        <div class="mini-stat"><span>Income</span><strong id="incomeStat">$0/day</strong></div>
+        <div class="mini-stat"><span>Running Cost</span><strong id="costStat">$0/tick</strong></div>
+        <div class="mini-stat"><span>Entry Fee</span><strong id="entryFeeStat">$0</strong></div>
+      </div>
+
+      <div class="objective hud-card" id="objectiveStat">Build paths and open your first rides.</div>
+
+      <div class="time-controls hud-card">
+        <div class="time-summary">
+          <div id="dayStat">Day 1</div>
+          <div id="timeState">Play x1</div>
+        </div>
         <div class="time-buttons">
           <button id="pauseBtn">Pause</button>
           <button id="speed1Btn">1x</button>
@@ -30,7 +41,8 @@
           <button id="speed3Btn">3x</button>
         </div>
       </div>
-      <div class="actions">
+
+      <div class="actions hud-card">
         <button id="saveBtn">Save</button>
         <button id="loadBtn">Load</button>
       </div>
@@ -38,7 +50,10 @@
 
     <main class="layout">
       <aside class="panel sim-window" id="buildPanel">
-        <h2>Build Tools</h2>
+        <div class="panel-header">
+          <h2>Build Menu</h2>
+          <p>Pick a category, then place attractions on the map.</p>
+        </div>
         <div id="buildPreview"></div>
         <div id="buildButtons"></div>
       </aside>
@@ -49,9 +64,14 @@
       </section>
 
       <aside class="panel sim-window" id="infoPanel">
-        <h2>Park Inspector</h2>
+        <div class="panel-header">
+          <h2>Park Inspector</h2>
+          <p>Ride details, finances, and guest reactions.</p>
+        </div>
         <div id="infoContent"></div>
-        <h2>Guest Thoughts</h2>
+        <div class="panel-header thoughts-header">
+          <h2>Guest Thoughts</h2>
+        </div>
         <div id="thoughtsContent"></div>
       </aside>
     </main>
