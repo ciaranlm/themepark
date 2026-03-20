@@ -127,7 +127,27 @@ export class UI {
     const selectedLockReason = this.game.objectives.lockReason(selected, this.game);
     const selectedShortfall = Math.max(0, Math.ceil(selected.cost - this.game.economy.money));
     const affordText = this.game.economy.canAfford(selected.cost) ? 'Ready to build now.' : `Need $${selectedShortfall} more to build immediately.`;
-    this.buildPreview.innerHTML = `<div class="info-card"><strong>${selected.name}</strong><p>Category: ${selected.category} • Size ${selected.width}x${selected.height}</p><p>Build $${selected.cost} • Ticket $${selected.ticketPrice} • Upkeep $${selected.upkeep}</p><p>Exc ${selected.excitement} • Int ${selected.intensity} • Nau ${selected.nausea}</p><p>Capacity ${selected.capacity} • Cycle ${selected.cycleTime}s</p><p>Status: ${selectedState}${selectedState === 'locked' ? ` • ${selectedLockReason}` : ''}</p><p>${selectedState === 'locked' ? selectedLockReason : affordText}</p></div>`;
+    const statusText = selectedState === 'locked' ? this.game.objectives.lockReason(selected) : affordText;
+    this.buildPreview.innerHTML = `
+      <div class="build-preview-card">
+        <div class="build-preview-top">
+          <div>
+            <div class="category-pill">${selected.category}</div>
+            <h3>${selected.name}</h3>
+          </div>
+          <div class="category-pill">${selected.width}x${selected.height}</div>
+        </div>
+        <div class="preview-grid">
+          <div class="preview-chip"><span>Build Cost</span><strong>$${selected.cost}</strong></div>
+          <div class="preview-chip"><span>Ticket</span><strong>$${selected.ticketPrice}</strong></div>
+          <div class="preview-chip"><span>Upkeep</span><strong>$${selected.upkeep}</strong></div>
+          <div class="preview-chip"><span>Capacity</span><strong>${selected.capacity || '—'}</strong></div>
+          <div class="preview-chip"><span>Thrill</span><strong>E${selected.excitement} • I${selected.intensity} • N${selected.nausea}</strong></div>
+          <div class="preview-chip"><span>Cycle</span><strong>${selected.cycleTime || 0}s</strong></div>
+        </div>
+        <p class="preview-status"><strong>Status:</strong> ${selectedState}${selectedState === 'locked' ? '' : ' • Ready for placement'}.</p>
+        <p class="preview-status">${statusText}</p>
+      </div>`;
 
     for (const category of CATEGORY_ORDER) {
       const wrap = document.createElement('div');
@@ -147,8 +167,10 @@ export class UI {
             : `Need $${Math.ceil(b.cost - this.game.economy.money)} more`;
         const btn = document.createElement('button');
         btn.className = `build-btn ${this.game.state.snapshot.selectedBuild === b.id ? 'active' : ''} ${status} ${canAfford ? 'affordable' : 'unaffordable'}`;
-        btn.title = `${b.name} (${b.width}x${b.height})\nBuild $${b.cost} • Ticket $${b.ticketPrice} • Cycle ${b.cycleTime}s\n${explanation}`;
-        btn.innerHTML = `<strong>${b.name}</strong><small>${b.category} • $${b.cost} • ${b.width}x${b.height}</small><em>${status === 'locked' ? explanation : status === 'new' ? 'Newly unlocked!' : explanation}</em>`;
+        btn.title = `${b.name} (${b.width}x${b.height})
+Build $${b.cost} • Ticket $${b.ticketPrice} • Cycle ${b.cycleTime}s
+${explanation}`;
+        btn.innerHTML = `<strong>${b.name}</strong><small>$${b.cost} • ${b.width}x${b.height} footprint</small><em>${status === 'locked' ? explanation : status === 'new' ? 'Newly unlocked! Drop it into your park.' : explanation}</em>`;
         btn.onclick = () => {
           this.game.state.patch({ selectedBuild: b.id });
           this.game.inputSystem?.refreshPlacementPreview();
@@ -162,6 +184,7 @@ export class UI {
       this.buildButtons.appendChild(wrap);
     }
   }
+
 
   notify(text) {
     const node = document.createElement('div');
